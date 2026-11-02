@@ -91,3 +91,4 @@ export const CurrencyInput = React.forwardRef<HTMLInputElement, CurrencyInputPro
   }
 );
 CurrencyInput.displayName = 'CurrencyInput';
+
