@@ -442,7 +442,8 @@ export default function CobrancasPage() {
                 ) : (
                   <div className="pt-2 flex items-center justify-between text-xs border-t border-neutral-100 mt-2">
                     <span className="text-[#15803d] font-semibold text-[11px]">
-                      Pago em {inst.paid_at ? formatDateBR(inst.paid_at) : 'Data registrada'}
+                      Pago {inst.payment_method ? `(${inst.payment_method === 'cartao_credito' ? 'Crédito' : inst.payment_method === 'cartao_debito' ? 'Débito' : inst.payment_method.toUpperCase()})` : ''} em{' '}
+                      {inst.paid_at ? formatDateBR(inst.paid_at) : 'Data registrada'}
                     </span>
                     <button
                       type="button"
