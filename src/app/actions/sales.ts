@@ -177,19 +177,39 @@ export async function deleteSaleAction(saleId: string) {
   return { success: true };
 }
 
-export async function getSalesAction() {
+export interface SalesPaginationParams {
+  page?: number;
+  pageSize?: number;
+  search?: string;
+  paymentMethod?: string;
+}
+
+export async function getSalesAction(params?: SalesPaginationParams) {
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return { success: false, error: 'Não autenticado', sales: [] };
+    return {
+      success: false,
+      error: 'Não autenticado',
+      sales: [],
+      totalCount: 0,
+      totalPages: 1,
+      currentPage: 1,
+    };
   }
 
-  const { data: sales, error } = await supabase
+  const page = Math.max(1, params?.page || 1);
+  const pageSize = params?.pageSize ? Math.max(1, params.pageSize) : undefined;
+  const search = params?.search?.trim();
+  const paymentMethod = params?.paymentMethod?.trim();
+
+  let query = supabase
     .from('sales')
-    .select(`
+    .select(
+      `
       id,
       description,
       total_amount,
@@ -201,13 +221,48 @@ export async function getSalesAction() {
         name,
         phone
       )
-    `)
-    .eq('user_id', user.id)
-    .order('sale_date', { ascending: false });
+    `,
+      { count: 'exact' }
+    )
+    .eq('user_id', user.id);
 
-  if (error) {
-    return { success: false, error: error.message, sales: [] };
+  if (paymentMethod && paymentMethod !== 'all') {
+    query = query.eq('payment_method', paymentMethod);
   }
 
-  return { success: true, sales: sales || [] };
+  if (search) {
+    query = query.ilike('description', `%${search}%`);
+  }
+
+  query = query.order('sale_date', { ascending: false });
+
+  if (pageSize) {
+    const from = (page - 1) * pageSize;
+    const to = from + pageSize - 1;
+    query = query.range(from, to);
+  }
+
+  const { data: sales, count, error } = await query;
+
+  if (error) {
+    return {
+      success: false,
+      error: error.message,
+      sales: [],
+      totalCount: 0,
+      totalPages: 1,
+      currentPage: 1,
+    };
+  }
+
+  const totalCount = count ?? (sales?.length || 0);
+  const totalPages = pageSize ? Math.ceil(totalCount / pageSize) : 1;
+
+  return {
+    success: true,
+    sales: sales || [],
+    totalCount,
+    totalPages,
+    currentPage: page,
+  };
 }

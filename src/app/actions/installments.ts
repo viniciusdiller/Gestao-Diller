@@ -9,19 +9,37 @@ import {
   UpdateInstallmentInput,
 } from '@/lib/validations';
 
-export async function getInstallmentsAction() {
+export interface InstallmentsPaginationParams {
+  page?: number;
+  pageSize?: number;
+  status?: string;
+  clientId?: string;
+}
+
+export async function getInstallmentsAction(params?: InstallmentsPaginationParams) {
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return { success: false, error: 'Não autenticado', installments: [] };
+    return {
+      success: false,
+      error: 'Não autenticado',
+      installments: [],
+      totalCount: 0,
+      totalPages: 1,
+      currentPage: 1,
+    };
   }
 
-  const { data, error } = await supabase
+  const page = Math.max(1, params?.page || 1);
+  const pageSize = params?.pageSize ? Math.max(1, params.pageSize) : undefined;
+
+  let query = supabase
     .from('installments')
-    .select(`
+    .select(
+      `
       id,
       sale_id,
       client_id,
@@ -43,15 +61,50 @@ export async function getInstallmentsAction() {
         id,
         description
       )
-    `)
-    .eq('user_id', user.id)
-    .order('due_date', { ascending: true });
+    `,
+      { count: 'exact' }
+    )
+    .eq('user_id', user.id);
 
-  if (error) {
-    return { success: false, error: error.message, installments: [] };
+  if (params?.status && params.status !== 'all') {
+    query = query.eq('status', params.status);
   }
 
-  return { success: true, installments: data || [] };
+  if (params?.clientId) {
+    query = query.eq('client_id', params.clientId);
+  }
+
+  query = query.order('due_date', { ascending: true });
+
+  if (pageSize) {
+    const from = (page - 1) * pageSize;
+    const to = from + pageSize - 1;
+    query = query.range(from, to);
+  }
+
+  const { data, count, error } = await query;
+
+  if (error) {
+    return {
+      success: false,
+      error: error.message,
+      installments: [],
+      totalCount: 0,
+      totalPages: 1,
+      currentPage: 1,
+    };
+  }
+
+  const totalCount = count ?? (data?.length || 0);
+  const totalPages = pageSize ? Math.ceil(totalCount / pageSize) : 1;
+
+  return {
+    success: true,
+    installments: data || [],
+    totalCount,
+    totalPages,
+    currentPage: page,
+  };
 }
 
 export async function markInstallmentPaidAction(rawInput: PayInstallmentInput) {

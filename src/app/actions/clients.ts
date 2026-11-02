@@ -130,27 +130,59 @@ export async function deleteClientAction(clientId: string) {
   return { success: true };
 }
 
-export async function getClientsAction() {
+export interface ClientsPaginationParams {
+  page?: number;
+  pageSize?: number;
+  search?: string;
+}
+
+export async function getClientsAction(params?: ClientsPaginationParams) {
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return { success: false, error: 'Não autenticado', clients: [] };
+    return { success: false, error: 'Não autenticado', clients: [], totalCount: 0, totalPages: 1, currentPage: 1 };
   }
 
-  const { data: clients, error } = await supabase
+  const page = Math.max(1, params?.page || 1);
+  const pageSize = params?.pageSize ? Math.max(1, params.pageSize) : undefined;
+  const search = params?.search?.trim();
+
+  let query = supabase
     .from('clients')
-    .select('*')
-    .eq('user_id', user.id)
-    .order('name', { ascending: true });
+    .select('*', { count: 'exact' })
+    .eq('user_id', user.id);
+
+  if (search) {
+    query = query.or(`name.ilike.%${search}%,phone.ilike.%${search}%`);
+  }
+
+  query = query.order('name', { ascending: true });
+
+  if (pageSize) {
+    const from = (page - 1) * pageSize;
+    const to = from + pageSize - 1;
+    query = query.range(from, to);
+  }
+
+  const { data: clients, count, error } = await query;
 
   if (error) {
-    return { success: false, error: error.message, clients: [] };
+    return { success: false, error: error.message, clients: [], totalCount: 0, totalPages: 1, currentPage: 1 };
   }
 
-  return { success: true, clients: clients || [] };
+  const totalCount = count ?? (clients?.length || 0);
+  const totalPages = pageSize ? Math.ceil(totalCount / pageSize) : 1;
+
+  return {
+    success: true,
+    clients: clients || [],
+    totalCount,
+    totalPages,
+    currentPage: page,
+  };
 }
 
 export async function getClientDetailsAction(clientId: string) {
