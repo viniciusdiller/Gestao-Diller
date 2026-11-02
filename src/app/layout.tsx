@@ -5,8 +5,20 @@ import { ToastProvider } from '@/components/ui/toast';
 export const metadata: Metadata = {
   title: 'Renata Diller — Semijoias',
   description: 'Gestão financeira mobile-first para vendas, clientes e cobranças.',
+  manifest: '/manifest.webmanifest',
   icons: {
-    icon: '/logo.jpg',
+    icon: [
+      { url: '/logo.jpg', type: 'image/jpeg' },
+    ],
+    apple: [
+      { url: '/apple-touch-icon.png', sizes: '180x180', type: 'image/png' },
+    ],
+    shortcut: '/logo.jpg',
+  },
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'default',
+    title: 'Renata Semijoias',
   },
 };
 
@@ -16,7 +28,7 @@ export const viewport: Viewport = {
   maximumScale: 1,
   userScalable: false,
   viewportFit: 'cover',
-  themeColor: '#f0e9df',
+  themeColor: '#977f5a',
 };
 
 export default function RootLayout({

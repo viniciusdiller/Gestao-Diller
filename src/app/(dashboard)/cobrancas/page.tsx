@@ -79,11 +79,25 @@ export default function CobrancasPage() {
 
   const loadData = React.useCallback(async () => {
     setLoading(true);
-    const res = await getInstallmentsAction();
-    if (res.success && res.installments) {
-      setInstallments(res.installments);
+    try {
+      const res = await fetch('/api/installments');
+      const data = await res.json();
+      if (data.success && Array.isArray(data.installments)) {
+        setInstallments(data.installments);
+      } else {
+        const fallback = await getInstallmentsAction();
+        if (fallback.success && fallback.installments) {
+          setInstallments(fallback.installments);
+        }
+      }
+    } catch {
+      const fallback = await getInstallmentsAction();
+      if (fallback.success && fallback.installments) {
+        setInstallments(fallback.installments);
+      }
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   }, []);
 
   React.useEffect(() => {

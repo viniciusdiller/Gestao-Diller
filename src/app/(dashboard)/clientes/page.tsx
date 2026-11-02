@@ -77,11 +77,26 @@ export default function ClientesPage() {
 
   const loadClients = React.useCallback(async () => {
     setLoading(true);
-    const res = await getClientsAction();
-    if (res.success && res.clients) {
-      setClients(res.clients);
+    try {
+      const res = await fetch('/api/clients');
+      const data = await res.json();
+      if (data.success && Array.isArray(data.clients)) {
+        setClients(data.clients);
+      } else {
+        // Fallback seguro para action se a rota local estiver indisponível
+        const fallback = await getClientsAction();
+        if (fallback.success && fallback.clients) {
+          setClients(fallback.clients);
+        }
+      }
+    } catch {
+      const fallback = await getClientsAction();
+      if (fallback.success && fallback.clients) {
+        setClients(fallback.clients);
+      }
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   }, []);
 
   React.useEffect(() => {
@@ -92,11 +107,25 @@ export default function ClientesPage() {
   async function handleOpenDetails(clientId: string) {
     setSelectedClientId(clientId);
     setDetailsLoading(true);
-    const res = await getClientDetailsAction(clientId);
-    if (res.success) {
-      setClientDetails(res);
+    try {
+      const res = await fetch(`/api/clients/${clientId}`);
+      const data = await res.json();
+      if (data.success) {
+        setClientDetails(data);
+      } else {
+        const fallback = await getClientDetailsAction(clientId);
+        if (fallback.success) {
+          setClientDetails(fallback);
+        }
+      }
+    } catch {
+      const fallback = await getClientDetailsAction(clientId);
+      if (fallback.success) {
+        setClientDetails(fallback);
+      }
+    } finally {
+      setDetailsLoading(false);
     }
-    setDetailsLoading(false);
   }
 
   // Criação de cliente

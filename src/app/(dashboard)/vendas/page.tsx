@@ -97,13 +97,35 @@ export default function VendasPage() {
 
   const loadData = React.useCallback(async () => {
     setLoading(true);
-    const [salesRes, clientsRes] = await Promise.all([
-      getSalesAction(),
-      getClientsAction(),
-    ]);
-    if (salesRes.success) setSales(salesRes.sales);
-    if (clientsRes.success) setClients(clientsRes.clients);
-    setLoading(false);
+    try {
+      const [salesRes, clientsRes] = await Promise.all([
+        fetch('/api/sales').then((r) => r.json()).catch(() => null),
+        fetch('/api/clients').then((r) => r.json()).catch(() => null),
+      ]);
+
+      if (salesRes?.success && Array.isArray(salesRes.sales)) {
+        setSales(salesRes.sales);
+      } else {
+        const fbSales = await getSalesAction();
+        if (fbSales.success) setSales(fbSales.sales);
+      }
+
+      if (clientsRes?.success && Array.isArray(clientsRes.clients)) {
+        setClients(clientsRes.clients);
+      } else {
+        const fbClients = await getClientsAction();
+        if (fbClients.success) setClients(fbClients.clients);
+      }
+    } catch {
+      const [fbSales, fbClients] = await Promise.all([
+        getSalesAction(),
+        getClientsAction(),
+      ]);
+      if (fbSales.success) setSales(fbSales.sales);
+      if (fbClients.success) setClients(fbClients.clients);
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
   React.useEffect(() => {
