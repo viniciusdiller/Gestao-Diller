@@ -151,16 +151,16 @@ Aplicativo web mobile-first desenhado sob medida para celular para o controle fi
 ## 6. Checklist de Execução & Roadmap
 - [x] **Etapa 1**: Inicialização do Next.js 16 + Tailwind CSS + Lucide React + Vitest
 - [x] **Etapa 2**: Definição da migration SQL e políticas RLS (`supabase/migrations/20261102_initial_schema.sql`)
-- [ ] **Etapa 3**: Conexão e aplicação da migration no banco Supabase
-- [ ] **Etapa 4**: Implementação dos Utilitários de Negócio e Validações Zod
-- [ ] **Etapa 5**: Criação da Suíte de Testes Unitários (Vitest) e validação 100% verde
-- [ ] **Etapa 6**: Configuração de Autenticação Supabase e Middleware com Sessão Persistente
-- [ ] **Etapa 7**: Construção dos Componentes de UI Mobile-First e Bottom Navigation Bar
-- [ ] **Etapa 8**: Implementação da Tela de Login e Layout Autenticado
-- [ ] **Etapa 9**: Implementação do Módulo de Clientes (Cadastro, Lista e Perfil)
-- [ ] **Etapa 10**: Implementação do Módulo de Registro de Vendas e Parcelamento
-- [ ] **Etapa 11**: Implementação do Módulo de Cobranças com Integração WhatsApp
-- [ ] **Etapa 12**: Implementação do Dashboard Mobile (KPIs, Gráficos, Ranking, Alertas)
-- [ ] **Etapa 13**: Execução da Pipeline Pré-Commit (Testes + Typecheck + Build de Produção)
-- [ ] **Etapa 14**: Deploy na Vercel CLI com o nome `renata-diller-semijoias`
+- [x] **Etapa 3**: Conexão e aplicação da migration no banco Supabase
+- [x] **Etapa 4**: Implementação dos Utilitários de Negócio e Validações Zod
+- [x] **Etapa 5**: Criação da Suíte de Testes Unitários (Vitest) e validação 100% verde (24 testes aprovados)
+- [x] **Etapa 6**: Configuração de Autenticação Supabase e Middleware com Sessão Persistente
+- [x] **Etapa 7**: Construção dos Componentes de UI Mobile-First e Bottom Navigation Bar
+- [x] **Etapa 8**: Implementação da Tela de Login e Layout Autenticado
+- [x] **Etapa 9**: Implementação do Módulo de Clientes (Cadastro, Lista e Perfil)
+- [x] **Etapa 10**: Implementação do Módulo de Registro de Vendas e Parcelamento
+- [x] **Etapa 11**: Implementação do Módulo de Cobranças com Integração WhatsApp
+- [x] **Etapa 12**: Implementação do Dashboard Mobile (KPIs, Gráficos, Ranking, Alertas)
+- [x] **Etapa 13**: Execução da Pipeline Pré-Commit (Testes + Typecheck + Build de Produção)
+- [x] **Etapa 14**: Deploy na Vercel CLI com o nome `renata-diller-semijoias` (https://renata-diller-semijoias.vercel.app)
 - [ ] **Etapa 15**: Validação final de ponta a ponta e entrega ao usuário
