@@ -17,8 +17,10 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Modal } from '@/components/ui/modal';
+import { CurrencyInput } from '@/components/ui/currency-input';
 import { formatCurrency, formatDateBR } from '@/lib/utils';
 import { getWhatsAppBillingUrl, sanitizePhoneForWhatsApp } from '@/lib/services/whatsapp';
+import { PaymentMethod } from '@/lib/validations';
 
 type TabType = 'overdue' | 'today' | 'soon' | 'paid' | 'all';
 
@@ -31,6 +33,8 @@ export default function CobrancasPage() {
   // Modal Baixa de Parcela
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [selectedToPay, setSelectedToPay] = React.useState<any | null>(null);
+  const [payAmount, setPayAmount] = React.useState(0);
+  const [payMethod, setPayMethod] = React.useState<PaymentMethod>('pix');
   const [paying, setPaying] = React.useState(false);
   const [payError, setPayError] = React.useState<string | null>(null);
 
@@ -77,14 +81,28 @@ export default function CobrancasPage() {
   else if (activeTab === 'paid') currentList = paidList;
   else if (activeTab === 'all') currentList = installments;
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  function handleOpenPayModal(inst: any) {
+    setSelectedToPay(inst);
+    setPayAmount(Number(inst.amount) || 0);
+    setPayMethod('pix');
+    setPayError(null);
+  }
+
   async function handleConfirmPayment() {
     if (!selectedToPay) return;
+    if (payAmount <= 0) {
+      setPayError('Informe um valor pago maior que zero.');
+      return;
+    }
+
     setPaying(true);
     setPayError(null);
 
     const res = await markInstallmentPaidAction({
       installment_id: selectedToPay.id,
-      paid_amount: Number(selectedToPay.amount),
+      paid_amount: payAmount,
+      payment_method: payMethod,
     });
 
     if (res.success) {
@@ -272,7 +290,7 @@ export default function CobrancasPage() {
                     </a>
 
                     <Button
-                      onClick={() => setSelectedToPay(inst)}
+                      onClick={() => handleOpenPayModal(inst)}
                       variant="primary"
                       size="sm"
                       className="text-xs font-bold"
@@ -317,10 +335,50 @@ export default function CobrancasPage() {
                 </span>
               </div>
               <div className="flex justify-between">
-                <span className="text-[#766a5e]">Valor:</span>
-                <span className="font-bold text-base text-[#15803d]">
-                  {formatCurrency(Number(selectedToPay.amount))}
+                <span className="text-[#766a5e]">Vencimento Original:</span>
+                <span className="font-medium text-[#2d251e]">
+                  {formatDateBR(selectedToPay.due_date)}
                 </span>
+              </div>
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-xs font-semibold text-[#2d251e]">
+                Valor Recebido *
+              </label>
+              <CurrencyInput
+                value={payAmount}
+                onChange={setPayAmount}
+                className="bg-white"
+              />
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-xs font-semibold text-[#2d251e]">
+                Forma de Recebimento
+              </label>
+              <div className="grid grid-cols-2 gap-1.5">
+                {(
+                  [
+                    ['pix', 'PIX'],
+                    ['dinheiro', 'Dinheiro'],
+                    ['cartao_debito', 'Cartão Débito'],
+                    ['cartao_credito', 'Cartão Crédito'],
+                  ] as const
+                ).map(([m, label]) => (
+                  <button
+                    key={m}
+                    type="button"
+                    onClick={() => setPayMethod(m as PaymentMethod)}
+                    className={`py-2 px-2.5 rounded-xl border text-xs font-semibold transition-all ${
+                      payMethod === m
+                        ? 'border-[#977f5a] bg-[#977f5a]/15 text-[#836d4b]'
+                        : 'border-[#dfd5c4] bg-white text-[#766a5e]'
+                    }`}
+                  >
+                    {label}
+                  </button>
+                ))}
               </div>
             </div>
 

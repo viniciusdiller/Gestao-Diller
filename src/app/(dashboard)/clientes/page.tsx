@@ -20,6 +20,7 @@ import {
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input, Textarea } from '@/components/ui/input';
+import { PhoneInput } from '@/components/ui/phone-input';
 import { Modal } from '@/components/ui/modal';
 import { Badge } from '@/components/ui/badge';
 import { formatCurrency, formatDateBR } from '@/lib/utils';
@@ -232,12 +233,10 @@ export default function ClientesPage() {
             <label className="text-xs font-semibold text-[#2d251e]">
               WhatsApp com DDD *
             </label>
-            <Input
-              type="tel"
+            <PhoneInput
               required
-              placeholder="Ex: (11) 98765-4321"
               value={newPhone}
-              onChange={(e) => setNewPhone(e.target.value)}
+              onChange={setNewPhone}
               className="bg-white"
             />
           </div>

@@ -54,3 +54,12 @@ button, a, input, select, textarea {
 .pt-safe {
   padding-top: env(safe-area-inset-top, 0.5rem);
 }
+
+/* Hide scrollbar for smooth mobile touch carousels */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}

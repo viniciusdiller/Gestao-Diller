@@ -12,6 +12,7 @@ import { getClientsAction } from '../../actions/clients';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { CurrencyInput } from '@/components/ui/currency-input';
 import { Modal } from '@/components/ui/modal';
 import { Badge } from '@/components/ui/badge';
 import { formatCurrency, formatDateBR } from '@/lib/utils';
@@ -29,7 +30,7 @@ export default function VendasPage() {
   const [isModalOpen, setIsModalOpen] = React.useState(false);
   const [clientId, setClientId] = React.useState('');
   const [description, setDescription] = React.useState('');
-  const [totalAmountStr, setTotalAmountStr] = React.useState('');
+  const [totalAmount, setTotalAmount] = React.useState(0);
   const [paymentMethod, setPaymentMethod] = React.useState<PaymentMethod>('pix');
 
   // Parcelamento / Fiado
@@ -62,11 +63,10 @@ export default function VendasPage() {
   // Recalcula parcelas ao alterar valores do fiado
   React.useEffect(() => {
     if (paymentMethod === 'fiado') {
-      const amount = parseFloat(totalAmountStr.replace(',', '.'));
-      if (amount > 0 && numInstallments > 0 && firstDueDate) {
+      if (totalAmount > 0 && numInstallments > 0 && firstDueDate) {
         try {
           const items = generateInstallments({
-            totalAmount: amount,
+            totalAmount,
             numInstallments,
             firstDueDate,
             intervalType,
@@ -81,16 +81,15 @@ export default function VendasPage() {
     } else {
       setGeneratedInstallments([]);
     }
-  }, [paymentMethod, totalAmountStr, numInstallments, firstDueDate, intervalType]);
+  }, [paymentMethod, totalAmount, numInstallments, firstDueDate, intervalType]);
 
   async function handleCreateSale(e: React.FormEvent) {
     e.preventDefault();
     setErrorMsg(null);
     setSubmitting(true);
 
-    const amount = parseFloat(totalAmountStr.replace(',', '.'));
-    if (isNaN(amount) || amount <= 0) {
-      setErrorMsg('Informe um valor de venda válido.');
+    if (totalAmount <= 0) {
+      setErrorMsg('Informe um valor de venda maior que zero.');
       setSubmitting(false);
       return;
     }
@@ -104,7 +103,7 @@ export default function VendasPage() {
     const res = await createSaleAction({
       client_id: clientId,
       description,
-      total_amount: amount,
+      total_amount: totalAmount,
       payment_method: paymentMethod,
       installments:
         paymentMethod === 'fiado' && generatedInstallments.length > 0
@@ -116,7 +115,7 @@ export default function VendasPage() {
       setIsModalOpen(false);
       setClientId('');
       setDescription('');
-      setTotalAmountStr('');
+      setTotalAmount(0);
       setPaymentMethod('pix');
       setGeneratedInstallments([]);
       loadData();
@@ -272,19 +271,15 @@ export default function VendasPage() {
             />
           </div>
 
-          {/* Valor Total */}
+          {/* Valor Total com Máscara Bancária R$ */}
           <div className="space-y-1">
             <label className="text-xs font-semibold text-[#2d251e]">
-              Valor Total (R$) *
+              Valor Total *
             </label>
-            <Input
-              type="number"
-              step="0.01"
-              required
-              placeholder="0,00"
-              value={totalAmountStr}
-              onChange={(e) => setTotalAmountStr(e.target.value)}
-              className="bg-white text-lg font-bold text-[#977f5a]"
+            <CurrencyInput
+              value={totalAmount}
+              onChange={setTotalAmount}
+              className="bg-white"
             />
           </div>
 
