@@ -13,3 +13,4 @@ CHECK (payment_method IS NULL OR payment_method IN ('pix', 'dinheiro', 'cartao_d
 
 -- Notifica o PostgREST para recarregar o cache do schema imediatamente
 NOTIFY pgrst, 'reload schema';
+
