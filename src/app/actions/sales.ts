@@ -2,7 +2,12 @@
 
 import { revalidatePath } from 'next/cache';
 import { createClient } from '@/lib/supabase/server';
-import { SaleSchema, SaleInput } from '@/lib/validations';
+import {
+  SaleSchema,
+  SaleInput,
+  UpdateSaleSchema,
+  UpdateSaleInput,
+} from '@/lib/validations';
 
 export async function createSaleAction(rawInput: SaleInput) {
   const parsed = SaleSchema.safeParse(rawInput);
@@ -25,7 +30,6 @@ export async function createSaleAction(rawInput: SaleInput) {
   const { client_id, description, total_amount, payment_method, sale_date, installments } =
     parsed.data;
 
-  // 1. Insere a venda
   const isFiado = payment_method === 'fiado';
   const saleStatus = isFiado ? 'pending' : 'completed';
 
@@ -47,7 +51,6 @@ export async function createSaleAction(rawInput: SaleInput) {
     return { success: false, error: 'Erro ao registrar venda: ' + saleErr?.message };
   }
 
-  // 2. Se houver parcelas (fiado ou parcelamento informado), cria na tabela installments
   if (installments && installments.length > 0) {
     const installmentsToInsert = installments.map((inst) => ({
       user_id: user.id,
@@ -77,6 +80,101 @@ export async function createSaleAction(rawInput: SaleInput) {
   revalidatePath('/clientes');
   revalidatePath('/');
   return { success: true, sale };
+}
+
+export async function updateSaleAction(rawInput: UpdateSaleInput) {
+  const parsed = UpdateSaleSchema.safeParse(rawInput);
+  if (!parsed.success) {
+    return {
+      success: false,
+      error: parsed.error.issues[0]?.message || 'Dados inválidos para atualizar venda.',
+    };
+  }
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return { success: false, error: 'Sessão expirada. Faça login novamente.' };
+  }
+
+  const { id, description, total_amount, payment_method, sale_date, client_id } = parsed.data;
+
+  // Atualiza a venda
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const updatePayload: Record<string, any> = {
+    description: description.trim(),
+    total_amount,
+    payment_method,
+    updated_at: new Date().toISOString(),
+  };
+
+  if (sale_date) {
+    updatePayload.sale_date = sale_date;
+  }
+  if (client_id) {
+    updatePayload.client_id = client_id;
+  }
+
+  const { data: updatedSale, error } = await supabase
+    .from('sales')
+    .update(updatePayload)
+    .eq('id', id)
+    .eq('user_id', user.id)
+    .select()
+    .single();
+
+  if (error || !updatedSale) {
+    return { success: false, error: 'Erro ao atualizar venda: ' + error?.message };
+  }
+
+  // Se o cliente mudou, atualiza também nas parcelas associadas
+  if (client_id) {
+    await supabase
+      .from('installments')
+      .update({ client_id, updated_at: new Date().toISOString() })
+      .eq('sale_id', id)
+      .eq('user_id', user.id);
+  }
+
+  revalidatePath('/vendas');
+  revalidatePath('/cobrancas');
+  revalidatePath('/clientes');
+  revalidatePath('/');
+  return { success: true, sale: updatedSale };
+}
+
+export async function deleteSaleAction(saleId: string) {
+  if (!saleId) {
+    return { success: false, error: 'ID de venda inválido.' };
+  }
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return { success: false, error: 'Sessão expirada. Faça login novamente.' };
+  }
+
+  const { error } = await supabase
+    .from('sales')
+    .delete()
+    .eq('id', saleId)
+    .eq('user_id', user.id);
+
+  if (error) {
+    return { success: false, error: 'Erro ao excluir venda: ' + error.message };
+  }
+
+  revalidatePath('/vendas');
+  revalidatePath('/cobrancas');
+  revalidatePath('/clientes');
+  revalidatePath('/');
+  return { success: true };
 }
 
 export async function getSalesAction() {

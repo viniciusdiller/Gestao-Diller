@@ -1,7 +1,9 @@
 import { formatCurrency, formatDateBR } from '../utils';
 
-export function sanitizePhoneForWhatsApp(phone: string): string {
+export function sanitizePhoneForWhatsApp(phone?: string | null): string {
+  if (!phone) return '';
   const digitsOnly = phone.replace(/\D/g, '');
+  if (!digitsOnly) return '';
 
   // Número brasileiro padrão sem código do país (DDD + 8 ou 9 dígitos)
   if (digitsOnly.length === 10 || digitsOnly.length === 11) {
@@ -39,10 +41,11 @@ export function generateBillingMessage(params: BillingMessageParams): string {
 }
 
 export function getWhatsAppBillingUrl(
-  phone: string,
+  phone: string | null | undefined,
   params: BillingMessageParams
 ): string {
   const cleanPhone = sanitizePhoneForWhatsApp(phone);
+  if (!cleanPhone) return '';
   const message = generateBillingMessage(params);
   return `https://wa.me/${cleanPhone}?text=${encodeURIComponent(message)}`;
 }
@@ -76,8 +79,12 @@ export function generateSaleReceiptMessage(params: SaleReceiptParams): string {
   return `Oi, ${firstName}! ✨ Passando pra registrar seu pedido com a Renata Semijoias: ${description} no valor de ${formattedAmount} (${methodText}). Muito obrigada pela preferência e confiança! Qualquer dúvida estou sempre por aqui. 🥰`;
 }
 
-export function getWhatsAppReceiptUrl(phone: string, params: SaleReceiptParams): string {
+export function getWhatsAppReceiptUrl(
+  phone: string | null | undefined,
+  params: SaleReceiptParams
+): string {
   const cleanPhone = sanitizePhoneForWhatsApp(phone);
+  if (!cleanPhone) return '';
   const message = generateSaleReceiptMessage(params);
   return `https://wa.me/${cleanPhone}?text=${encodeURIComponent(message)}`;
 }

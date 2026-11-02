@@ -5,14 +5,35 @@ export const ClientSchema = z.object({
   phone: z
     .string()
     .trim()
+    .optional()
+    .nullable()
     .refine((val) => {
+      if (!val || val.trim() === '') return true;
       const digits = val.replace(/\D/g, '');
       return digits.length >= 10 && digits.length <= 13;
-    }, 'Informe um telefone com DDD válido (10 ou 11 dígitos).'),
+    }, 'Se informado, o telefone deve ter DDD válido (10 ou 11 dígitos).'),
   notes: z.string().trim().optional().nullable(),
 });
 
 export type ClientInput = z.infer<typeof ClientSchema>;
+
+export const UpdateClientSchema = z.object({
+  id: z.string().uuid('ID de cliente inválido.'),
+  name: z.string().trim().min(2, 'O nome deve ter pelo menos 2 caracteres.'),
+  phone: z
+    .string()
+    .trim()
+    .optional()
+    .nullable()
+    .refine((val) => {
+      if (!val || val.trim() === '') return true;
+      const digits = val.replace(/\D/g, '');
+      return digits.length >= 10 && digits.length <= 13;
+    }, 'Se informado, o telefone deve ter DDD válido (10 ou 11 dígitos).'),
+  notes: z.string().trim().optional().nullable(),
+});
+
+export type UpdateClientInput = z.infer<typeof UpdateClientSchema>;
 
 export const PaymentMethodEnum = z.enum([
   'pix',
@@ -42,6 +63,17 @@ export const SaleSchema = z.object({
 
 export type SaleInput = z.infer<typeof SaleSchema>;
 
+export const UpdateSaleSchema = z.object({
+  id: z.string().uuid('ID de venda inválido.'),
+  client_id: z.string().uuid('Selecione uma cliente válida.').optional(),
+  description: z.string().trim().min(2, 'A descrição deve ter pelo menos 2 caracteres.'),
+  total_amount: z.number().positive('O valor total deve ser maior que zero.'),
+  payment_method: PaymentMethodEnum,
+  sale_date: z.string().optional(),
+});
+
+export type UpdateSaleInput = z.infer<typeof UpdateSaleSchema>;
+
 export const PayInstallmentSchema = z.object({
   installment_id: z.string().uuid('ID de parcela inválido.'),
   paid_amount: z.number().positive('O valor pago deve ser maior que zero.'),
@@ -50,3 +82,14 @@ export const PayInstallmentSchema = z.object({
 });
 
 export type PayInstallmentInput = z.infer<typeof PayInstallmentSchema>;
+
+export const UpdateInstallmentSchema = z.object({
+  id: z.string().uuid('ID de parcela inválido.'),
+  amount: z.number().positive('O valor da parcela deve ser maior que zero.'),
+  due_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Data deve estar no formato AAAA-MM-DD.'),
+  status: z.enum(['pending', 'paid', 'cancelled']).optional(),
+  paid_amount: z.number().positive().optional().nullable(),
+  notes: z.string().trim().optional().nullable(),
+});
+
+export type UpdateInstallmentInput = z.infer<typeof UpdateInstallmentSchema>;
