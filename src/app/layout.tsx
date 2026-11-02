@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from 'next';
 import './globals.css';
+import { ToastProvider } from '@/components/ui/toast';
 
 export const metadata: Metadata = {
   title: 'Renata Diller — Semijoias',
@@ -26,7 +27,7 @@ export default function RootLayout({
   return (
     <html lang="pt-BR" className="h-full bg-[#f0e9df]">
       <body className="min-h-full flex flex-col bg-[#f0e9df] text-[#2d251e] antialiased select-none font-sans">
-        {children}
+        <ToastProvider>{children}</ToastProvider>
       </body>
     </html>
   );

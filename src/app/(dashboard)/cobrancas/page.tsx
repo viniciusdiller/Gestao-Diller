@@ -18,6 +18,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Modal } from '@/components/ui/modal';
 import { CurrencyInput } from '@/components/ui/currency-input';
+import { useToast } from '@/components/ui/toast';
 import { formatCurrency, formatDateBR } from '@/lib/utils';
 import { getWhatsAppBillingUrl, sanitizePhoneForWhatsApp } from '@/lib/services/whatsapp';
 import { PaymentMethod } from '@/lib/validations';
@@ -25,6 +26,7 @@ import { PaymentMethod } from '@/lib/validations';
 type TabType = 'overdue' | 'today' | 'soon' | 'paid' | 'all';
 
 export default function CobrancasPage() {
+  const { showToast } = useToast();
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [installments, setInstallments] = React.useState<any[]>([]);
   const [loading, setLoading] = React.useState(true);
@@ -107,6 +109,7 @@ export default function CobrancasPage() {
 
     if (res.success) {
       setSelectedToPay(null);
+      showToast('Pagamento registrado com sucesso! 💰');
       loadData();
     } else {
       setPayError(res.error || 'Erro ao registrar pagamento.');

@@ -23,10 +23,12 @@ import { Input, Textarea } from '@/components/ui/input';
 import { PhoneInput } from '@/components/ui/phone-input';
 import { Modal } from '@/components/ui/modal';
 import { Badge } from '@/components/ui/badge';
+import { useToast } from '@/components/ui/toast';
 import { formatCurrency, formatDateBR } from '@/lib/utils';
 import { sanitizePhoneForWhatsApp } from '@/lib/services/whatsapp';
 
 export default function ClientesPage() {
+  const { showToast } = useToast();
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [clients, setClients] = React.useState<any[]>([]);
   const [search, setSearch] = React.useState('');
@@ -87,6 +89,7 @@ export default function ClientesPage() {
       setNewName('');
       setNewPhone('');
       setNewNotes('');
+      showToast('Cliente cadastrada com sucesso! ✨');
       loadClients();
     } else {
       setFormError(res.error || 'Erro ao cadastrar cliente.');
