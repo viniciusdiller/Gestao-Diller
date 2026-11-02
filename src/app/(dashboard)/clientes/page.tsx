@@ -28,6 +28,7 @@ import { Input, Textarea } from '@/components/ui/input';
 import { PhoneInput } from '@/components/ui/phone-input';
 import { Modal } from '@/components/ui/modal';
 import { Badge } from '@/components/ui/badge';
+import { Pagination } from '@/components/ui/pagination';
 import { useToast } from '@/components/ui/toast';
 import { formatCurrency, formatDateBR } from '@/lib/utils';
 import { sanitizePhoneForWhatsApp } from '@/lib/services/whatsapp';
@@ -37,7 +38,14 @@ export default function ClientesPage() {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [clients, setClients] = React.useState<any[]>([]);
   const [search, setSearch] = React.useState('');
+  const [currentPage, setCurrentPage] = React.useState(1);
   const [loading, setLoading] = React.useState(true);
+
+  const PAGE_SIZE = 12;
+
+  React.useEffect(() => {
+    setCurrentPage(1);
+  }, [search]);
 
   // Modal Novo Cliente
   const [isNewModalOpen, setIsNewModalOpen] = React.useState(false);
@@ -182,6 +190,12 @@ export default function ClientesPage() {
     );
   });
 
+  const totalPages = Math.ceil(filteredClients.length / PAGE_SIZE) || 1;
+  const paginatedClients = filteredClients.slice(
+    (currentPage - 1) * PAGE_SIZE,
+    currentPage * PAGE_SIZE
+  );
+
   return (
     <div className="space-y-4 animate-in fade-in duration-300">
       {/* Header com Título e Ação */}
@@ -238,52 +252,63 @@ export default function ClientesPage() {
           </Button>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
-          {filteredClients.map((client) => {
-            const cleanPhone = sanitizePhoneForWhatsApp(client.phone || '');
-            const waUrl = cleanPhone ? `https://wa.me/${cleanPhone}` : null;
+        <div className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
+            {paginatedClients.map((client) => {
+              const cleanPhone = sanitizePhoneForWhatsApp(client.phone || '');
+              const waUrl = cleanPhone ? `https://wa.me/${cleanPhone}` : null;
 
-            return (
-              <Card
-                key={client.id}
-                onClick={() => handleOpenDetails(client.id)}
-                className="p-4 bg-white border-[#e4dcd0] hover:border-[#977f5a] hover:shadow-md hover:-translate-y-0.5 active:scale-[0.99] transition-all duration-200 cursor-pointer shadow-xs flex items-center justify-between"
-              >
-                <div className="min-w-0 pr-2">
-                  <h3 className="text-sm font-bold text-[#2d251e] truncate">
-                    {client.name}
-                  </h3>
-                  <div className="flex items-center gap-1.5 text-xs text-[#766a5e] mt-0.5">
-                    <Phone className="w-3.5 h-3.5 text-[#977f5a]" />
-                    <span>{client.phone || 'Sem WhatsApp cadastrado'}</span>
+              return (
+                <Card
+                  key={client.id}
+                  onClick={() => handleOpenDetails(client.id)}
+                  className="p-4 bg-white border-[#e4dcd0] hover:border-[#977f5a] hover:shadow-md hover:-translate-y-0.5 active:scale-[0.99] transition-all duration-200 cursor-pointer shadow-xs flex items-center justify-between"
+                >
+                  <div className="min-w-0 pr-2">
+                    <h3 className="text-sm font-bold text-[#2d251e] truncate">
+                      {client.name}
+                    </h3>
+                    <div className="flex items-center gap-1.5 text-xs text-[#766a5e] mt-0.5">
+                      <Phone className="w-3.5 h-3.5 text-[#977f5a]" />
+                      <span>{client.phone || 'Sem WhatsApp cadastrado'}</span>
+                    </div>
+                    {client.notes && (
+                      <p className="text-[11px] text-[#8e8174] truncate mt-1">
+                        {client.notes}
+                      </p>
+                    )}
                   </div>
-                  {client.notes && (
-                    <p className="text-[11px] text-[#8e8174] truncate mt-1">
-                      {client.notes}
-                    </p>
-                  )}
-                </div>
 
-                <div className="flex items-center gap-2 shrink-0">
-                  {waUrl && (
-                    <a
-                      href={waUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      onClick={(e) => e.stopPropagation()}
-                      className="w-9 h-9 rounded-full bg-[#25D366]/15 text-[#128C7E] hover:bg-[#25D366] hover:text-white flex items-center justify-center transition-all"
-                      title="Abrir WhatsApp"
-                    >
-                      <MessageCircle className="w-4 h-4" />
-                    </a>
-                  )}
-                  <div className="w-7 h-7 rounded-full flex items-center justify-center text-[#766a5e]">
-                    <ChevronRight className="w-4 h-4" />
+                  <div className="flex items-center gap-2 shrink-0">
+                    {waUrl && (
+                      <a
+                        href={waUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={(e) => e.stopPropagation()}
+                        className="w-9 h-9 rounded-full bg-[#25D366]/15 text-[#128C7E] hover:bg-[#25D366] hover:text-white flex items-center justify-center transition-all"
+                        title="Abrir WhatsApp"
+                      >
+                        <MessageCircle className="w-4 h-4" />
+                      </a>
+                    )}
+                    <div className="w-7 h-7 rounded-full flex items-center justify-center text-[#766a5e]">
+                      <ChevronRight className="w-4 h-4" />
+                    </div>
                   </div>
-                </div>
-              </Card>
-            );
-          })}
+                </Card>
+              );
+            })}
+          </div>
+
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            totalItems={filteredClients.length}
+            pageSize={PAGE_SIZE}
+            itemName="clientes"
+            onPageChange={(page) => setCurrentPage(page)}
+          />
         </div>
       )}
 

@@ -26,6 +26,7 @@ import { Modal } from '@/components/ui/modal';
 import { Input, Textarea } from '@/components/ui/input';
 import { CurrencyInput } from '@/components/ui/currency-input';
 import { DatePicker } from '@/components/ui/date-picker';
+import { Pagination } from '@/components/ui/pagination';
 import { useToast } from '@/components/ui/toast';
 import { formatCurrency, formatDateBR } from '@/lib/utils';
 import { getWhatsAppBillingUrl } from '@/lib/services/whatsapp';
@@ -39,6 +40,13 @@ export default function CobrancasPage() {
   const [installments, setInstallments] = React.useState<any[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [activeTab, setActiveTab] = React.useState<TabType>('overdue');
+  const [currentPage, setCurrentPage] = React.useState(1);
+
+  const PAGE_SIZE = 12;
+
+  React.useEffect(() => {
+    setCurrentPage(1);
+  }, [activeTab]);
 
   // Modal Baixa de Parcela
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -108,6 +116,12 @@ export default function CobrancasPage() {
   else if (activeTab === 'soon') currentList = soonList;
   else if (activeTab === 'paid') currentList = paidList;
   else if (activeTab === 'all') currentList = installments;
+
+  const totalPages = Math.ceil(currentList.length / PAGE_SIZE) || 1;
+  const paginatedInstallments = currentList.slice(
+    (currentPage - 1) * PAGE_SIZE,
+    currentPage * PAGE_SIZE
+  );
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   function handleOpenPayModal(inst: any) {
@@ -299,8 +313,9 @@ export default function CobrancasPage() {
           </p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
-          {currentList.map((inst) => {
+        <div className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
+            {paginatedInstallments.map((inst) => {
             const isOverdue = inst.status === 'pending' && inst.due_date < todayStr;
             const isToday = inst.status === 'pending' && inst.due_date === todayStr;
             const isPaid = inst.status === 'paid';
@@ -460,7 +475,17 @@ export default function CobrancasPage() {
             );
           })}
         </div>
-      )}
+
+        <Pagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          totalItems={currentList.length}
+          pageSize={PAGE_SIZE}
+          itemName="parcelas"
+          onPageChange={(page) => setCurrentPage(page)}
+        />
+      </div>
+    )}
 
       {/* Modal Confirmação de Baixa / Pagamento */}
       <Modal

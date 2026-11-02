@@ -29,6 +29,7 @@ import { Modal } from '@/components/ui/modal';
 import { Badge } from '@/components/ui/badge';
 import { Combobox } from '@/components/ui/combobox';
 import { DatePicker } from '@/components/ui/date-picker';
+import { Pagination } from '@/components/ui/pagination';
 import { useToast } from '@/components/ui/toast';
 import { formatCurrency, formatDateBR } from '@/lib/utils';
 import { generateInstallments, InstallmentItem } from '@/lib/services/installment-calculator';
@@ -47,6 +48,13 @@ export default function VendasPage() {
   // Busca e Filtros
   const [search, setSearch] = React.useState('');
   const [filterMethod, setFilterMethod] = React.useState<string>('all');
+  const [currentPage, setCurrentPage] = React.useState(1);
+
+  const PAGE_SIZE = 12;
+
+  React.useEffect(() => {
+    setCurrentPage(1);
+  }, [search, filterMethod]);
 
   // Modal Nova Venda
   const [isModalOpen, setIsModalOpen] = React.useState(false);
@@ -286,6 +294,12 @@ export default function VendasPage() {
     return sale.payment_method === filterMethod;
   });
 
+  const totalPages = Math.ceil(filteredSales.length / PAGE_SIZE) || 1;
+  const paginatedSales = filteredSales.slice(
+    (currentPage - 1) * PAGE_SIZE,
+    currentPage * PAGE_SIZE
+  );
+
   return (
     <div className="space-y-4 animate-in fade-in duration-300">
       {/* Header */}
@@ -368,100 +382,111 @@ export default function VendasPage() {
           </Button>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
-          {filteredSales.map((sale) => {
-            const clientPhone = sale.clients?.phone || '';
-            const receiptUrl = clientPhone
-              ? getWhatsAppReceiptUrl(clientPhone, {
-                  clientName: sale.clients?.name || 'Cliente',
-                  description: sale.description,
-                  amount: Number(sale.total_amount),
-                  paymentMethod: sale.payment_method,
-                })
-              : '';
+        <div className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
+            {paginatedSales.map((sale) => {
+              const clientPhone = sale.clients?.phone || '';
+              const receiptUrl = clientPhone
+                ? getWhatsAppReceiptUrl(clientPhone, {
+                    clientName: sale.clients?.name || 'Cliente',
+                    description: sale.description,
+                    amount: Number(sale.total_amount),
+                    paymentMethod: sale.payment_method,
+                  })
+                : '';
 
-            return (
-              <Card
-                key={sale.id}
-                className="p-4 bg-white border-[#e4dcd0] shadow-xs hover:border-[#977f5a] hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 flex flex-col justify-between"
-              >
-                <div className="flex items-start justify-between pb-2 border-b border-[#ebdcca]/70">
-                  <div className="min-w-0 pr-2">
-                    <div className="flex items-center gap-1.5">
-                      <span className="text-sm font-bold text-[#2d251e] truncate">
-                        {sale.clients?.name || 'Cliente'}
-                      </span>
-                      <Badge
-                        variant={
-                          sale.payment_method === 'fiado' && sale.status === 'pending'
-                            ? 'warning'
-                            : 'success'
-                        }
-                        className="text-[10px] px-1.5 py-0 uppercase font-bold"
-                      >
-                        {sale.payment_method === 'fiado' && sale.status === 'pending'
-                          ? 'Fiado (Pendente)'
-                          : paymentLabels[sale.payment_method] || sale.payment_method}
-                      </Badge>
+              return (
+                <Card
+                  key={sale.id}
+                  className="p-4 bg-white border-[#e4dcd0] shadow-xs hover:border-[#977f5a] hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 flex flex-col justify-between"
+                >
+                  <div className="flex items-start justify-between pb-2 border-b border-[#ebdcca]/70">
+                    <div className="min-w-0 pr-2">
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-sm font-bold text-[#2d251e] truncate">
+                          {sale.clients?.name || 'Cliente'}
+                        </span>
+                        <Badge
+                          variant={
+                            sale.payment_method === 'fiado' && sale.status === 'pending'
+                              ? 'warning'
+                              : 'success'
+                          }
+                          className="text-[10px] px-1.5 py-0 uppercase font-bold"
+                        >
+                          {sale.payment_method === 'fiado' && sale.status === 'pending'
+                            ? 'Fiado (Pendente)'
+                            : paymentLabels[sale.payment_method] || sale.payment_method}
+                        </Badge>
+                      </div>
+                      <p className="text-xs text-[#52463b] mt-1 font-medium leading-relaxed">
+                        {sale.description}
+                      </p>
+                      <p className="text-[10px] text-[#766a5e] mt-1 flex items-center gap-1">
+                        <Calendar className="w-3 h-3 text-[#977f5a]" />
+                        {formatDateBR(sale.sale_date)}
+                      </p>
                     </div>
-                    <p className="text-xs text-[#52463b] mt-1 font-medium leading-relaxed">
-                      {sale.description}
-                    </p>
-                    <p className="text-[10px] text-[#766a5e] mt-1 flex items-center gap-1">
-                      <Calendar className="w-3 h-3 text-[#977f5a]" />
-                      {formatDateBR(sale.sale_date)}
-                    </p>
-                  </div>
 
-                  <div className="text-right shrink-0">
-                    <span className="text-base font-bold text-[#977f5a]">
-                      {formatCurrency(Number(sale.total_amount))}
-                    </span>
-                  </div>
-                </div>
-
-                {/* Ações do Card de Venda: WhatsApp, Editar e Excluir */}
-                <div className="pt-2.5 flex items-center justify-between gap-2">
-                  <div className="flex items-center gap-1.5">
-                    {receiptUrl ? (
-                      <a
-                        href={receiptUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#25D366]/15 text-[#128C7E] text-xs font-semibold hover:bg-[#25D366] hover:text-white transition-all active:scale-95"
-                      >
-                        <MessageCircle className="w-3.5 h-3.5" />
-                        Comprovante
-                      </a>
-                    ) : (
-                      <span className="text-[10px] text-[#766a5e] bg-neutral-100 px-2 py-1 rounded-md">
-                        Sem WhatsApp
+                    <div className="text-right shrink-0">
+                      <span className="text-base font-bold text-[#977f5a]">
+                        {formatCurrency(Number(sale.total_amount))}
                       </span>
-                    )}
+                    </div>
                   </div>
 
-                  <div className="flex items-center gap-1.5">
-                    <button
-                      type="button"
-                      onClick={() => handleOpenEditModal(sale)}
-                      className="p-2 rounded-lg text-[#766a5e] hover:text-[#977f5a] hover:bg-[#f5efe6] transition-colors"
-                      title="Editar venda"
-                    >
-                      <Pencil className="w-4 h-4" />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setSaleToDelete(sale)}
-                      className="p-2 rounded-lg text-red-500 hover:text-red-700 hover:bg-red-50 transition-colors"
-                      title="Excluir venda"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
+                  {/* Ações do Card de Venda: WhatsApp, Editar e Excluir */}
+                  <div className="pt-2.5 flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-1.5">
+                      {receiptUrl ? (
+                        <a
+                          href={receiptUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#25D366]/15 text-[#128C7E] text-xs font-semibold hover:bg-[#25D366] hover:text-white transition-all active:scale-95"
+                        >
+                          <MessageCircle className="w-3.5 h-3.5" />
+                          Comprovante
+                        </a>
+                      ) : (
+                        <span className="text-[10px] text-[#766a5e] bg-neutral-100 px-2 py-1 rounded-md">
+                          Sem WhatsApp
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() => handleOpenEditModal(sale)}
+                        className="p-2 rounded-lg text-[#766a5e] hover:text-[#977f5a] hover:bg-[#f5efe6] transition-colors"
+                        title="Editar venda"
+                      >
+                        <Pencil className="w-4 h-4" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setSaleToDelete(sale)}
+                        className="p-2 rounded-lg text-red-500 hover:text-red-700 hover:bg-red-50 transition-colors"
+                        title="Excluir venda"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
                   </div>
-                </div>
-              </Card>
-            );
-          })}
+                </Card>
+              );
+            })}
+          </div>
+
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            totalItems={filteredSales.length}
+            pageSize={PAGE_SIZE}
+            itemName="vendas"
+            onPageChange={(page) => setCurrentPage(page)}
+          />
         </div>
       )}
 
