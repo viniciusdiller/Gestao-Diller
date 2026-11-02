@@ -1,0 +1,56 @@
+@import "tailwindcss";
+
+:root {
+  --background: #f0e9df;
+  --foreground: #2d251e;
+  --surface: #ffffff;
+  --surface-subtle: #fbf9f6;
+  --border: #e3dacd;
+  
+  --primary: #977f5a;
+  --primary-hover: #836d4b;
+  --primary-foreground: #ffffff;
+  
+  --muted: #f4efe7;
+  --muted-foreground: #766a5e;
+  
+  --accent: #d8c8b0;
+  --accent-foreground: #2d251e;
+
+  --danger: #b91c1c;
+  --danger-bg: #fef2f2;
+  --danger-border: #fecaca;
+
+  --warning: #b45309;
+  --warning-bg: #fffbeb;
+  --warning-border: #fde68a;
+
+  --success: #15803d;
+  --success-bg: #f0fdf4;
+  --success-border: #bbf7d0;
+
+  --radius: 0.85rem;
+}
+
+body {
+  background-color: var(--background);
+  color: var(--foreground);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -webkit-tap-highlight-color: transparent;
+  overscroll-behavior-y: none;
+}
+
+/* Touch Friendly Styles */
+button, a, input, select, textarea {
+  touch-action: manipulation;
+}
+
+/* Safe area for mobile notch and navigation bars */
+.pb-safe {
+  padding-bottom: env(safe-area-inset-bottom, 1rem);
+}
+
+.pt-safe {
+  padding-top: env(safe-area-inset-top, 0.5rem);
+}
