@@ -33,6 +33,22 @@ function DashboardSkeleton() {
 
 async function DashboardContent() {
   const result = await getDashboardDataAction();
+  if (!result.success || !result.metrics) {
+    return (
+      <div className="py-12 text-center space-y-3">
+        <p className="text-sm font-medium text-[#2d251e]">
+          Sessão não identificada. Por favor, acesse sua conta.
+        </p>
+        <Link
+          href="/login"
+          className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#977f5a] text-white text-xs font-semibold"
+        >
+          Acessar Login
+        </Link>
+      </div>
+    );
+  }
+
   const metrics = result.metrics;
 
   const monthRevenue = metrics?.monthRevenue ?? 0;
