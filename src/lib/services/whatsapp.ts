@@ -46,3 +46,38 @@ export function getWhatsAppBillingUrl(
   const message = generateBillingMessage(params);
   return `https://wa.me/${cleanPhone}?text=${encodeURIComponent(message)}`;
 }
+
+export interface SaleReceiptParams {
+  clientName: string;
+  description: string;
+  amount: number;
+  paymentMethod: string;
+  installmentsCount?: number;
+}
+
+export function generateSaleReceiptMessage(params: SaleReceiptParams): string {
+  const { clientName, description, amount, paymentMethod, installmentsCount } = params;
+  const firstName = clientName.trim().split(' ')[0] || 'Cliente';
+  const formattedAmount = formatCurrency(amount);
+
+  const paymentLabels: Record<string, string> = {
+    pix: 'PIX',
+    dinheiro: 'Dinheiro',
+    cartao_debito: 'Cartão de Débito',
+    cartao_credito: 'Cartão de Crédito',
+    fiado:
+      installmentsCount && installmentsCount > 1
+        ? `Fiado / Parcelado (${installmentsCount}x)`
+        : 'Fiado / A Prazo',
+  };
+
+  const methodText = paymentLabels[paymentMethod] || paymentMethod.toUpperCase();
+
+  return `Oi, ${firstName}! ✨ Passando pra registrar seu pedido com a Renata Semijoias: ${description} no valor de ${formattedAmount} (${methodText}). Muito obrigada pela preferência e confiança! Qualquer dúvida estou sempre por aqui. 🥰`;
+}
+
+export function getWhatsAppReceiptUrl(phone: string, params: SaleReceiptParams): string {
+  const cleanPhone = sanitizePhoneForWhatsApp(phone);
+  const message = generateSaleReceiptMessage(params);
+  return `https://wa.me/${cleanPhone}?text=${encodeURIComponent(message)}`;
+}
