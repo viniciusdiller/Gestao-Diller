@@ -28,6 +28,7 @@ import { PhoneInput } from '@/components/ui/phone-input';
 import { Modal } from '@/components/ui/modal';
 import { Badge } from '@/components/ui/badge';
 import { Combobox } from '@/components/ui/combobox';
+import { DatePicker } from '@/components/ui/date-picker';
 import { useToast } from '@/components/ui/toast';
 import { formatCurrency, formatDateBR } from '@/lib/utils';
 import { generateInstallments, InstallmentItem } from '@/lib/services/installment-calculator';
@@ -579,11 +580,10 @@ export default function VendasPage() {
             <label className="text-xs font-semibold text-[#2d251e]">
               Data da Venda
             </label>
-            <Input
-              type="date"
+            <DatePicker
               value={saleDate}
-              onChange={(e) => setSaleDate(e.target.value)}
-              className="bg-white"
+              onChange={setSaleDate}
+              placeholder="Selecione a data da venda..."
             />
           </div>
 
@@ -652,11 +652,11 @@ export default function VendasPage() {
                 <label className="text-[11px] font-medium text-[#766a5e]">
                   Vencimento da 1ª Parcela
                 </label>
-                <Input
-                  type="date"
+                <DatePicker
                   value={firstDueDate}
-                  onChange={(e) => setFirstDueDate(e.target.value)}
-                  className="h-10 text-xs bg-white"
+                  onChange={setFirstDueDate}
+                  placeholder="Data do 1º vencimento..."
+                  showPresets={true}
                 />
               </div>
 
@@ -756,11 +756,10 @@ export default function VendasPage() {
             <label className="text-xs font-semibold text-[#2d251e]">
               Data da Venda
             </label>
-            <Input
-              type="date"
+            <DatePicker
               value={editSaleDate}
-              onChange={(e) => setEditSaleDate(e.target.value)}
-              className="bg-white"
+              onChange={setEditSaleDate}
+              placeholder="Selecione a data da venda..."
             />
           </div>
 

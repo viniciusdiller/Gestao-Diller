@@ -25,6 +25,7 @@ import { Badge } from '@/components/ui/badge';
 import { Modal } from '@/components/ui/modal';
 import { Input, Textarea } from '@/components/ui/input';
 import { CurrencyInput } from '@/components/ui/currency-input';
+import { DatePicker } from '@/components/ui/date-picker';
 import { useToast } from '@/components/ui/toast';
 import { formatCurrency, formatDateBR } from '@/lib/utils';
 import { getWhatsAppBillingUrl } from '@/lib/services/whatsapp';
@@ -606,12 +607,12 @@ export default function CobrancasPage() {
             <label className="text-xs font-semibold text-[#2d251e]">
               Data de Vencimento *
             </label>
-            <Input
-              type="date"
-              required
+            <DatePicker
               value={editDueDate}
-              onChange={(e) => setEditDueDate(e.target.value)}
-              className="bg-white"
+              onChange={setEditDueDate}
+              required
+              placeholder="Selecione o vencimento..."
+              showPresets={true}
             />
           </div>
 
