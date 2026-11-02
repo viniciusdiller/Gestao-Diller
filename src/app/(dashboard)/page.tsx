@@ -9,6 +9,7 @@ import {
   MessageCircle,
   ArrowRight,
   PlusCircle,
+  Gem,
 } from 'lucide-react';
 import { getDashboardDataAction } from '../actions/dashboard';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
@@ -65,6 +66,19 @@ async function DashboardContent() {
     ...monthlyHistory.map((m) => m.total),
     100
   );
+
+  const partnerBrands = [
+    'Carol Freitas Acessórios',
+    'Amorelli',
+    'Zane',
+    'Rujah',
+    'Elos Acessórios',
+    'Ilumi',
+    'AR Folheados',
+    'Miss A',
+    'JMN Folheados',
+    'Veraneio Semijoias',
+  ];
 
   return (
     <div className="space-y-5 animate-in fade-in duration-300">
@@ -179,13 +193,15 @@ async function DashboardContent() {
           </CardHeader>
           <CardContent className="p-3.5 pt-0 space-y-2">
             {overdueAlerts.slice(0, 3).map((inst) => {
-              const waUrl = getWhatsAppBillingUrl(inst.client_phone || '', {
-                clientName: inst.client_name || 'Cliente',
-                amount: inst.amount,
-                dueDate: inst.due_date,
-                installmentNumber: inst.installment_number,
-                totalInstallments: inst.total_installments,
-              });
+              const waUrl = inst.client_phone
+                ? getWhatsAppBillingUrl(inst.client_phone, {
+                    clientName: inst.client_name || 'Cliente',
+                    amount: inst.amount,
+                    dueDate: inst.due_date,
+                    installmentNumber: inst.installment_number,
+                    totalInstallments: inst.total_installments,
+                  })
+                : '';
 
               return (
                 <div
@@ -209,27 +225,35 @@ async function DashboardContent() {
                     </p>
                   </div>
 
-                  <a
-                    href={waUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1 px-3 py-2 rounded-xl bg-[#25D366] text-white text-xs font-semibold shadow-xs active:scale-95 transition-all shrink-0"
-                    title="Cobrar pelo WhatsApp"
-                  >
-                    <MessageCircle className="w-3.5 h-3.5" /> Cobrar
-                  </a>
+                  {waUrl ? (
+                    <a
+                      href={waUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 px-3 py-2 rounded-xl bg-[#25D366] text-white text-xs font-semibold shadow-xs active:scale-95 transition-all shrink-0"
+                      title="Cobrar pelo WhatsApp"
+                    >
+                      <MessageCircle className="w-3.5 h-3.5" /> Cobrar
+                    </a>
+                  ) : (
+                    <span className="text-[10px] text-[#766a5e] bg-white px-2 py-1 rounded-md border border-red-200 shrink-0">
+                      Sem WhatsApp
+                    </span>
+                  )}
                 </div>
               );
             })}
 
             {dueSoonAlerts.slice(0, 2).map((inst) => {
-              const waUrl = getWhatsAppBillingUrl(inst.client_phone || '', {
-                clientName: inst.client_name || 'Cliente',
-                amount: inst.amount,
-                dueDate: inst.due_date,
-                installmentNumber: inst.installment_number,
-                totalInstallments: inst.total_installments,
-              });
+              const waUrl = inst.client_phone
+                ? getWhatsAppBillingUrl(inst.client_phone, {
+                    clientName: inst.client_name || 'Cliente',
+                    amount: inst.amount,
+                    dueDate: inst.due_date,
+                    installmentNumber: inst.installment_number,
+                    totalInstallments: inst.total_installments,
+                  })
+                : '';
 
               return (
                 <div
@@ -253,15 +277,21 @@ async function DashboardContent() {
                     </p>
                   </div>
 
-                  <a
-                    href={waUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1 px-3 py-2 rounded-xl bg-[#25D366] text-white text-xs font-semibold shadow-xs active:scale-95 transition-all shrink-0"
-                    title="Lembrar pelo WhatsApp"
-                  >
-                    <MessageCircle className="w-3.5 h-3.5" /> Lembrar
-                  </a>
+                  {waUrl ? (
+                    <a
+                      href={waUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 px-3 py-2 rounded-xl bg-[#25D366] text-white text-xs font-semibold shadow-xs active:scale-95 transition-all shrink-0"
+                      title="Lembrar pelo WhatsApp"
+                    >
+                      <MessageCircle className="w-3.5 h-3.5" /> Lembrar
+                    </a>
+                  ) : (
+                    <span className="text-[10px] text-[#766a5e] bg-white px-2 py-1 rounded-md border border-amber-200 shrink-0">
+                      Sem WhatsApp
+                    </span>
+                  )}
                 </div>
               );
             })}
@@ -355,6 +385,36 @@ async function DashboardContent() {
           )}
         </CardContent>
       </Card>
+
+      {/* Marcas Parceiras e Estoque de Fornecedores */}
+      <Card className="border-[#e4dcd0] bg-[#ffffff] shadow-xs">
+        <CardHeader className="p-3.5 pb-2">
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-sm font-bold flex items-center gap-1.5 text-[#2d251e]">
+              <Gem className="w-4 h-4 text-[#977f5a]" /> Marcas Parceiras & Estoque
+            </CardTitle>
+            <span className="text-[10px] font-semibold text-[#977f5a] bg-[#977f5a]/10 px-2 py-0.5 rounded-full">
+              Ref: 26/10
+            </span>
+          </div>
+          <p className="text-xs text-[#766a5e] pt-0.5">
+            Total em estoque/compras registradas:{' '}
+            <strong className="text-[#2d251e] font-bold">R$ 35.956,03</strong>
+          </p>
+        </CardHeader>
+        <CardContent className="p-3.5 pt-1">
+          <div className="flex flex-wrap gap-1.5">
+            {partnerBrands.map((brand) => (
+              <span
+                key={brand}
+                className="px-2.5 py-1 rounded-lg bg-[#faf6f0] border border-[#e4dcd0] text-[11px] font-medium text-[#52463b]"
+              >
+                {brand}
+              </span>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }
@@ -366,4 +426,3 @@ export default function DashboardPage() {
     </React.Suspense>
   );
 }
-

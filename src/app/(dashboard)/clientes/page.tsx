@@ -11,10 +11,15 @@ import {
   Clock,
   ChevronRight,
   Sparkles,
+  Pencil,
+  Trash2,
+  AlertTriangle,
 } from 'lucide-react';
 import {
   getClientsAction,
   createClientAction,
+  updateClientAction,
+  deleteClientAction,
   getClientDetailsAction,
 } from '../../actions/clients';
 import { Card } from '@/components/ui/card';
@@ -48,6 +53,20 @@ export default function ClientesPage() {
   const [clientDetails, setClientDetails] = React.useState<any | null>(null);
   const [detailsLoading, setDetailsLoading] = React.useState(false);
 
+  // Modal Edição de Cliente
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [clientToEdit, setClientToEdit] = React.useState<any | null>(null);
+  const [editName, setEditName] = React.useState('');
+  const [editPhone, setEditPhone] = React.useState('');
+  const [editNotes, setEditNotes] = React.useState('');
+  const [savingEdit, setSavingEdit] = React.useState(false);
+  const [editError, setEditError] = React.useState<string | null>(null);
+
+  // Modal Exclusão de Cliente
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [clientToDelete, setClientToDelete] = React.useState<any | null>(null);
+  const [deletingClient, setDeletingClient] = React.useState(false);
+
   const loadClients = React.useCallback(async () => {
     setLoading(true);
     const res = await getClientsAction();
@@ -80,7 +99,7 @@ export default function ClientesPage() {
 
     const res = await createClientAction({
       name: newName,
-      phone: newPhone,
+      phone: newPhone || null,
       notes: newNotes,
     });
 
@@ -95,6 +114,63 @@ export default function ClientesPage() {
       setFormError(res.error || 'Erro ao cadastrar cliente.');
     }
     setSubmitting(false);
+  }
+
+  // Abre Edição de Cliente
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  function handleOpenEdit(client: any) {
+    setClientToEdit(client);
+    setEditName(client.name || '');
+    setEditPhone(client.phone || '');
+    setEditNotes(client.notes || '');
+    setEditError(null);
+  }
+
+  // Salva Edição de Cliente
+  async function handleSaveEdit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!clientToEdit) return;
+    setSavingEdit(true);
+    setEditError(null);
+
+    const res = await updateClientAction({
+      id: clientToEdit.id,
+      name: editName,
+      phone: editPhone || null,
+      notes: editNotes || null,
+    });
+
+    if (res.success) {
+      setClientToEdit(null);
+      showToast('Cliente atualizada com sucesso! ✨');
+      loadClients();
+      if (selectedClientId === clientToEdit.id) {
+        handleOpenDetails(clientToEdit.id);
+      }
+    } else {
+      setEditError(res.error || 'Erro ao atualizar cliente.');
+    }
+    setSavingEdit(false);
+  }
+
+  // Confirma Exclusão de Cliente
+  async function handleConfirmDelete() {
+    if (!clientToDelete) return;
+    setDeletingClient(true);
+
+    const res = await deleteClientAction(clientToDelete.id);
+    if (res.success) {
+      setClientToDelete(null);
+      if (selectedClientId === clientToDelete.id) {
+        setSelectedClientId(null);
+        setClientDetails(null);
+      }
+      showToast('Cliente excluída com sucesso.');
+      loadClients();
+    } else {
+      showToast(res.error || 'Erro ao excluir cliente.', 'error');
+    }
+    setDeletingClient(false);
   }
 
   // Filtro de busca
@@ -165,7 +241,7 @@ export default function ClientesPage() {
         <div className="space-y-2.5">
           {filteredClients.map((client) => {
             const cleanPhone = sanitizePhoneForWhatsApp(client.phone || '');
-            const waUrl = `https://wa.me/${cleanPhone}`;
+            const waUrl = cleanPhone ? `https://wa.me/${cleanPhone}` : null;
 
             return (
               <Card
@@ -179,21 +255,28 @@ export default function ClientesPage() {
                   </h3>
                   <div className="flex items-center gap-1.5 text-xs text-[#766a5e] mt-0.5">
                     <Phone className="w-3.5 h-3.5 text-[#977f5a]" />
-                    <span>{client.phone}</span>
+                    <span>{client.phone || 'Sem WhatsApp cadastrado'}</span>
                   </div>
+                  {client.notes && (
+                    <p className="text-[11px] text-[#8e8174] truncate mt-1">
+                      {client.notes}
+                    </p>
+                  )}
                 </div>
 
                 <div className="flex items-center gap-2 shrink-0">
-                  <a
-                    href={waUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    onClick={(e) => e.stopPropagation()}
-                    className="w-9 h-9 rounded-full bg-[#25D366]/15 text-[#128C7E] hover:bg-[#25D366] hover:text-white flex items-center justify-center transition-all"
-                    title="Abrir WhatsApp"
-                  >
-                    <MessageCircle className="w-4 h-4" />
-                  </a>
+                  {waUrl && (
+                    <a
+                      href={waUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={(e) => e.stopPropagation()}
+                      className="w-9 h-9 rounded-full bg-[#25D366]/15 text-[#128C7E] hover:bg-[#25D366] hover:text-white flex items-center justify-center transition-all"
+                      title="Abrir WhatsApp"
+                    >
+                      <MessageCircle className="w-4 h-4" />
+                    </a>
+                  )}
                   <div className="w-7 h-7 rounded-full flex items-center justify-center text-[#766a5e]">
                     <ChevronRight className="w-4 h-4" />
                   </div>
@@ -204,7 +287,7 @@ export default function ClientesPage() {
         </div>
       )}
 
-      {/* Modal / Bottom-Sheet: Nova Cliente */}
+      {/* Modal / Bottom-Sheet: Nova Cliente (WhatsApp Opcional) */}
       <Modal
         isOpen={isNewModalOpen}
         onClose={() => setIsNewModalOpen(false)}
@@ -234,10 +317,10 @@ export default function ClientesPage() {
 
           <div className="space-y-1">
             <label className="text-xs font-semibold text-[#2d251e]">
-              WhatsApp com DDD *
+              WhatsApp com DDD (Opcional)
             </label>
             <PhoneInput
-              required
+              placeholder="(00) 00000-0000"
               value={newPhone}
               onChange={setNewPhone}
               className="bg-white"
@@ -249,7 +332,7 @@ export default function ClientesPage() {
               Observações (opcional)
             </label>
             <Textarea
-              placeholder="Preferências, anotações de peças favoritas..."
+              placeholder="Preferências, anotações de compras, créditos..."
               value={newNotes}
               onChange={(e) => setNewNotes(e.target.value)}
               className="bg-white"
@@ -269,7 +352,7 @@ export default function ClientesPage() {
         </form>
       </Modal>
 
-      {/* Modal / Bottom-Sheet: Detalhes e Perfil da Cliente */}
+      {/* Modal / Bottom-Sheet: Detalhes e Perfil da Cliente com Editar/Excluir */}
       <Modal
         isOpen={!!selectedClientId}
         onClose={() => {
@@ -277,7 +360,7 @@ export default function ClientesPage() {
           setClientDetails(null);
         }}
         title={clientDetails?.client?.name || 'Perfil da Cliente'}
-        description={clientDetails?.client?.phone}
+        description={clientDetails?.client?.phone || 'Sem WhatsApp cadastrado'}
       >
         {detailsLoading ? (
           <div className="py-8 text-center text-xs text-[#766a5e]">
@@ -285,6 +368,38 @@ export default function ClientesPage() {
           </div>
         ) : clientDetails ? (
           <div className="space-y-4">
+            {/* Ações de Gestão do Perfil: Editar e Excluir */}
+            <div className="flex items-center justify-end gap-2 pb-1 border-b border-[#ebdcca]/60">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => handleOpenEdit(clientDetails.client)}
+                className="gap-1.5 text-xs h-8 text-[#977f5a] border-[#977f5a]/40"
+              >
+                <Pencil className="w-3.5 h-3.5" /> Editar Cliente
+              </Button>
+              <Button
+                variant="danger"
+                size="sm"
+                onClick={() => setClientToDelete(clientDetails.client)}
+                className="gap-1.5 text-xs h-8"
+              >
+                <Trash2 className="w-3.5 h-3.5" /> Excluir Cliente
+              </Button>
+            </div>
+
+            {/* Observações da Cliente se existirem */}
+            {clientDetails.client?.notes && (
+              <div className="p-3 rounded-xl bg-[#faf6f0] border border-[#ebdcca] text-xs space-y-1">
+                <span className="font-bold text-[#977f5a] uppercase text-[10px] tracking-wider">
+                  Observações:
+                </span>
+                <p className="text-[#52463b] font-medium leading-relaxed">
+                  {clientDetails.client.notes}
+                </p>
+              </div>
+            )}
+
             {/* Cards de Resumo do Perfil */}
             <div className="grid grid-cols-2 gap-2.5">
               <div className="p-3 rounded-xl bg-white border border-[#e4dcd0]">
@@ -377,6 +492,120 @@ export default function ClientesPage() {
             </div>
           </div>
         ) : null}
+      </Modal>
+
+      {/* Modal Editar Cliente */}
+      <Modal
+        isOpen={!!clientToEdit}
+        onClose={() => setClientToEdit(null)}
+        title="Editar Cliente"
+        description="Atualize as informações da cliente"
+      >
+        <form onSubmit={handleSaveEdit} className="space-y-3.5">
+          {editError && (
+            <div className="p-3 text-xs rounded-xl bg-red-50 border border-red-200 text-red-700">
+              {editError}
+            </div>
+          )}
+
+          <div className="space-y-1">
+            <label className="text-xs font-semibold text-[#2d251e]">
+              Nome Completo *
+            </label>
+            <Input
+              type="text"
+              required
+              value={editName}
+              onChange={(e) => setEditName(e.target.value)}
+              className="bg-white"
+            />
+          </div>
+
+          <div className="space-y-1">
+            <label className="text-xs font-semibold text-[#2d251e]">
+              WhatsApp com DDD (Opcional)
+            </label>
+            <PhoneInput
+              placeholder="(00) 00000-0000"
+              value={editPhone}
+              onChange={setEditPhone}
+              className="bg-white"
+            />
+          </div>
+
+          <div className="space-y-1">
+            <label className="text-xs font-semibold text-[#2d251e]">
+              Observações (opcional)
+            </label>
+            <Textarea
+              placeholder="Preferências, anotações..."
+              value={editNotes}
+              onChange={(e) => setEditNotes(e.target.value)}
+              className="bg-white"
+            />
+          </div>
+
+          <div className="pt-2 flex gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setClientToEdit(null)}
+              className="w-1/2"
+            >
+              Cancelar
+            </Button>
+            <Button
+              type="submit"
+              className="w-1/2 font-semibold shadow-md"
+              isLoading={savingEdit}
+            >
+              Salvar Alterações
+            </Button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* Modal Confirmação de Exclusão de Cliente */}
+      <Modal
+        isOpen={!!clientToDelete}
+        onClose={() => setClientToDelete(null)}
+        title="Excluir Cliente"
+        description="Esta ação removerá todos os registros desta cliente"
+      >
+        <div className="space-y-4">
+          <div className="p-3.5 rounded-xl bg-red-50 border border-red-200 flex items-start gap-3">
+            <AlertTriangle className="w-5 h-5 text-red-600 shrink-0 mt-0.5" />
+            <div className="text-xs text-red-700 space-y-1">
+              <p className="font-bold">
+                Tem certeza que deseja excluir &quot;{clientToDelete?.name}&quot;?
+              </p>
+              <p className="text-[11px] text-red-600/90 pt-1">
+                Todas as vendas, parcelas e históricos vinculados a esta cliente também serão excluídos permanentemente.
+              </p>
+            </div>
+          </div>
+
+          <div className="flex gap-2.5">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setClientToDelete(null)}
+              className="w-1/2"
+              disabled={deletingClient}
+            >
+              Cancelar
+            </Button>
+            <Button
+              type="button"
+              variant="danger"
+              onClick={handleConfirmDelete}
+              className="w-1/2 font-bold"
+              isLoading={deletingClient}
+            >
+              Sim, Excluir
+            </Button>
+          </div>
+        </div>
       </Modal>
     </div>
   );

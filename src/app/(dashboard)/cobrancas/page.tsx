@@ -8,19 +8,26 @@ import {
   CheckCircle2,
   MessageCircle,
   Phone,
+  Pencil,
+  Trash2,
+  RotateCcw,
 } from 'lucide-react';
 import {
   getInstallmentsAction,
   markInstallmentPaidAction,
+  revertInstallmentPaymentAction,
+  updateInstallmentAction,
+  deleteInstallmentAction,
 } from '../../actions/installments';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Modal } from '@/components/ui/modal';
+import { Input, Textarea } from '@/components/ui/input';
 import { CurrencyInput } from '@/components/ui/currency-input';
 import { useToast } from '@/components/ui/toast';
 import { formatCurrency, formatDateBR } from '@/lib/utils';
-import { getWhatsAppBillingUrl, sanitizePhoneForWhatsApp } from '@/lib/services/whatsapp';
+import { getWhatsAppBillingUrl } from '@/lib/services/whatsapp';
 import { PaymentMethod } from '@/lib/validations';
 
 type TabType = 'overdue' | 'today' | 'soon' | 'paid' | 'all';
@@ -37,8 +44,26 @@ export default function CobrancasPage() {
   const [selectedToPay, setSelectedToPay] = React.useState<any | null>(null);
   const [payAmount, setPayAmount] = React.useState(0);
   const [payMethod, setPayMethod] = React.useState<PaymentMethod>('pix');
+  const [payNotes, setPayNotes] = React.useState('');
   const [paying, setPaying] = React.useState(false);
   const [payError, setPayError] = React.useState<string | null>(null);
+
+  // Modal Edição de Parcela
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [installmentToEdit, setInstallmentToEdit] = React.useState<any | null>(null);
+  const [editAmount, setEditAmount] = React.useState(0);
+  const [editDueDate, setEditDueDate] = React.useState('');
+  const [editNotes, setEditNotes] = React.useState('');
+  const [savingEdit, setSavingEdit] = React.useState(false);
+  const [editError, setEditError] = React.useState<string | null>(null);
+
+  // Modal Exclusão de Parcela
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [installmentToDelete, setInstallmentToDelete] = React.useState<any | null>(null);
+  const [deletingInstallment, setDeletingInstallment] = React.useState(false);
+
+  // Reversão de Parcela
+  const [revertingId, setRevertingId] = React.useState<string | null>(null);
 
   const [todayStr, setTodayStr] = React.useState('');
   const [sevenDaysLaterStr, setSevenDaysLaterStr] = React.useState('');
@@ -88,6 +113,7 @@ export default function CobrancasPage() {
     setSelectedToPay(inst);
     setPayAmount(Number(inst.amount) || 0);
     setPayMethod('pix');
+    setPayNotes('');
     setPayError(null);
   }
 
@@ -105,6 +131,7 @@ export default function CobrancasPage() {
       installment_id: selectedToPay.id,
       paid_amount: payAmount,
       payment_method: payMethod,
+      notes: payNotes || undefined,
     });
 
     if (res.success) {
@@ -115,6 +142,65 @@ export default function CobrancasPage() {
       setPayError(res.error || 'Erro ao registrar pagamento.');
     }
     setPaying(false);
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  function handleOpenEditModal(inst: any) {
+    setInstallmentToEdit(inst);
+    setEditAmount(Number(inst.amount) || 0);
+    setEditDueDate(inst.due_date || '');
+    setEditNotes(inst.notes || '');
+    setEditError(null);
+  }
+
+  async function handleSaveEdit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!installmentToEdit) return;
+    setSavingEdit(true);
+    setEditError(null);
+
+    const res = await updateInstallmentAction({
+      id: installmentToEdit.id,
+      amount: editAmount,
+      due_date: editDueDate,
+      notes: editNotes || null,
+    });
+
+    if (res.success) {
+      setInstallmentToEdit(null);
+      showToast('Parcela atualizada com sucesso! ✨');
+      loadData();
+    } else {
+      setEditError(res.error || 'Erro ao atualizar parcela.');
+    }
+    setSavingEdit(false);
+  }
+
+  async function handleConfirmDelete() {
+    if (!installmentToDelete) return;
+    setDeletingInstallment(true);
+
+    const res = await deleteInstallmentAction(installmentToDelete.id);
+    if (res.success) {
+      setInstallmentToDelete(null);
+      showToast('Parcela excluída com sucesso.');
+      loadData();
+    } else {
+      showToast(res.error || 'Erro ao excluir parcela.', 'error');
+    }
+    setDeletingInstallment(false);
+  }
+
+  async function handleRevertPayment(instId: string) {
+    setRevertingId(instId);
+    const res = await revertInstallmentPaymentAction(instId);
+    if (res.success) {
+      showToast('Baixa revertida para pendente com sucesso.');
+      loadData();
+    } else {
+      showToast(res.error || 'Erro ao reverter pagamento.', 'error');
+    }
+    setRevertingId(null);
   }
 
   return (
@@ -130,10 +216,10 @@ export default function CobrancasPage() {
       </div>
 
       {/* Tabs / Filtros Rápidos (Horizontal Scroll Touch) */}
-      <div className="flex gap-1.5 overflow-x-auto pb-1 no-scrollbar">
+      <div className="flex gap-1.5 overflow-x-auto pb-1 no-scrollbar text-xs">
         <button
           onClick={() => setActiveTab('overdue')}
-          className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-all shrink-0 ${
+          className={`flex items-center gap-1.5 px-3 py-2 rounded-xl font-bold transition-all shrink-0 ${
             activeTab === 'overdue'
               ? 'bg-[#b91c1c] text-white shadow-xs'
               : 'bg-white text-[#766a5e] border border-[#dfd5c4]'
@@ -145,7 +231,7 @@ export default function CobrancasPage() {
 
         <button
           onClick={() => setActiveTab('today')}
-          className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-all shrink-0 ${
+          className={`flex items-center gap-1.5 px-3 py-2 rounded-xl font-bold transition-all shrink-0 ${
             activeTab === 'today'
               ? 'bg-[#b45309] text-white shadow-xs'
               : 'bg-white text-[#766a5e] border border-[#dfd5c4]'
@@ -157,7 +243,7 @@ export default function CobrancasPage() {
 
         <button
           onClick={() => setActiveTab('soon')}
-          className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-all shrink-0 ${
+          className={`flex items-center gap-1.5 px-3 py-2 rounded-xl font-bold transition-all shrink-0 ${
             activeTab === 'soon'
               ? 'bg-[#977f5a] text-white shadow-xs'
               : 'bg-white text-[#766a5e] border border-[#dfd5c4]'
@@ -169,7 +255,7 @@ export default function CobrancasPage() {
 
         <button
           onClick={() => setActiveTab('paid')}
-          className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-all shrink-0 ${
+          className={`flex items-center gap-1.5 px-3 py-2 rounded-xl font-bold transition-all shrink-0 ${
             activeTab === 'paid'
               ? 'bg-[#15803d] text-white shadow-xs'
               : 'bg-white text-[#766a5e] border border-[#dfd5c4]'
@@ -177,6 +263,17 @@ export default function CobrancasPage() {
         >
           <CheckCircle2 className="w-3.5 h-3.5" />
           Pagas ({paidList.length})
+        </button>
+
+        <button
+          onClick={() => setActiveTab('all')}
+          className={`flex items-center gap-1.5 px-3 py-2 rounded-xl font-bold transition-all shrink-0 ${
+            activeTab === 'all'
+              ? 'bg-[#52463b] text-white shadow-xs'
+              : 'bg-white text-[#766a5e] border border-[#dfd5c4]'
+          }`}
+        >
+          Todas ({installments.length})
         </button>
       </div>
 
@@ -207,13 +304,16 @@ export default function CobrancasPage() {
             const isToday = inst.status === 'pending' && inst.due_date === todayStr;
             const isPaid = inst.status === 'paid';
 
-            const waUrl = getWhatsAppBillingUrl(inst.clients?.phone || '', {
-              clientName: inst.clients?.name || 'Cliente',
-              amount: Number(inst.amount),
-              dueDate: inst.due_date,
-              installmentNumber: inst.installment_number,
-              totalInstallments: inst.total_installments,
-            });
+            const clientPhone = inst.clients?.phone;
+            const waUrl = clientPhone
+              ? getWhatsAppBillingUrl(clientPhone, {
+                  clientName: inst.clients?.name || 'Cliente',
+                  amount: Number(inst.amount),
+                  dueDate: inst.due_date,
+                  installmentNumber: inst.installment_number,
+                  totalInstallments: inst.total_installments,
+                })
+              : '';
 
             return (
               <Card
@@ -233,8 +333,18 @@ export default function CobrancasPage() {
                     </h3>
                     <div className="flex items-center gap-1.5 text-xs text-[#766a5e] mt-0.5">
                       <Phone className="w-3 h-3 text-[#977f5a]" />
-                      <span>{inst.clients?.phone}</span>
+                      <span>{inst.clients?.phone || 'Sem WhatsApp cadastrado'}</span>
                     </div>
+                    {inst.sales?.description && (
+                      <p className="text-[11px] text-[#52463b] font-medium truncate mt-1">
+                        {inst.sales.description}
+                      </p>
+                    )}
+                    {inst.notes && (
+                      <p className="text-[10px] text-[#8e8174] italic truncate mt-0.5">
+                        Nota: {inst.notes}
+                      </p>
+                    )}
                   </div>
 
                   <div className="text-right shrink-0">
@@ -263,44 +373,85 @@ export default function CobrancasPage() {
                     </span>
                   </div>
 
-                  <Badge
-                    variant={
-                      isPaid
-                        ? 'success'
-                        : isOverdue
-                        ? 'danger'
-                        : isToday
-                        ? 'warning'
-                        : 'default'
-                    }
-                    className="text-[10px] uppercase font-bold"
-                  >
-                    {isPaid ? 'Pago' : isOverdue ? 'Atrasado' : isToday ? 'Hoje' : 'A Vencer'}
-                  </Badge>
+                  <div className="flex items-center gap-1.5">
+                    <Badge
+                      variant={
+                        isPaid
+                          ? 'success'
+                          : isOverdue
+                          ? 'danger'
+                          : isToday
+                          ? 'warning'
+                          : 'default'
+                      }
+                      className="text-[10px] uppercase font-bold"
+                    >
+                      {isPaid ? 'Pago' : isOverdue ? 'Atrasado' : isToday ? 'Hoje' : 'A Vencer'}
+                    </Badge>
+
+                    {/* Botões rápidos de Editar / Excluir Parcela */}
+                    <button
+                      type="button"
+                      onClick={() => handleOpenEditModal(inst)}
+                      className="p-1 rounded-md text-[#766a5e] hover:text-[#977f5a] hover:bg-[#f5efe6] transition-colors"
+                      title="Editar parcela"
+                    >
+                      <Pencil className="w-3.5 h-3.5" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setInstallmentToDelete(inst)}
+                      className="p-1 rounded-md text-red-500 hover:text-red-700 hover:bg-red-50 transition-colors"
+                      title="Excluir parcela"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
                 </div>
 
-                {/* Ações Rápidas Mobile */}
-                {!isPaid && (
+                {/* Ações Rápidas Mobile: Cobrança ou Baixa */}
+                {!isPaid ? (
                   <div className="pt-3 grid grid-cols-2 gap-2">
-                    <a
-                      href={waUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl bg-[#25D366] text-white text-xs font-bold active:scale-95 transition-all shadow-xs"
-                    >
-                      <MessageCircle className="w-4 h-4" />
-                      Cobrar no Whats
-                    </a>
+                    {waUrl ? (
+                      <a
+                        href={waUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl bg-[#25D366] text-white text-xs font-bold active:scale-95 transition-all shadow-xs"
+                      >
+                        <MessageCircle className="w-4 h-4" />
+                        Cobrar no Whats
+                      </a>
+                    ) : (
+                      <div className="flex items-center justify-center py-2.5 px-3 rounded-xl bg-neutral-100 text-[#766a5e] text-xs font-semibold">
+                        Sem WhatsApp
+                      </div>
+                    )}
 
                     <Button
                       onClick={() => handleOpenPayModal(inst)}
                       variant="primary"
                       size="sm"
-                      className="text-xs font-bold"
+                      className="text-xs font-bold shadow-xs"
                     >
                       <CheckCircle2 className="w-4 h-4 mr-1" />
                       Dar Baixa
                     </Button>
+                  </div>
+                ) : (
+                  <div className="pt-2 flex items-center justify-between text-xs border-t border-neutral-100 mt-2">
+                    <span className="text-[#15803d] font-semibold text-[11px]">
+                      Pago em {inst.paid_at ? formatDateBR(inst.paid_at) : 'Data registrada'}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => handleRevertPayment(inst.id)}
+                      disabled={revertingId === inst.id}
+                      className="inline-flex items-center gap-1 text-[11px] font-bold text-amber-700 hover:underline"
+                    >
+                      <RotateCcw className="w-3 h-3" />
+                      Reverter Baixa
+                    </button>
                   </div>
                 )}
               </Card>
@@ -352,7 +503,7 @@ export default function CobrancasPage() {
               <CurrencyInput
                 value={payAmount}
                 onChange={setPayAmount}
-                className="bg-white"
+                className="bg-white font-bold"
               />
             </div>
 
@@ -385,6 +536,18 @@ export default function CobrancasPage() {
               </div>
             </div>
 
+            <div className="space-y-1">
+              <label className="text-xs font-semibold text-[#2d251e]">
+                Observações de Baixa (opcional)
+              </label>
+              <Input
+                placeholder="Ex: Pago com PIX comprovante no whats"
+                value={payNotes}
+                onChange={(e) => setPayNotes(e.target.value)}
+                className="bg-white text-xs"
+              />
+            </div>
+
             <div className="grid grid-cols-2 gap-2 pt-2">
               <Button
                 variant="ghost"
@@ -404,6 +567,133 @@ export default function CobrancasPage() {
             </div>
           </div>
         )}
+      </Modal>
+
+      {/* Modal Editar Parcela */}
+      <Modal
+        isOpen={!!installmentToEdit}
+        onClose={() => setInstallmentToEdit(null)}
+        title="Editar Parcela"
+        description="Ajuste o valor ou data desta parcela"
+      >
+        <form onSubmit={handleSaveEdit} className="space-y-3.5">
+          {editError && (
+            <div className="p-3 text-xs rounded-xl bg-red-50 border border-red-200 text-red-700">
+              {editError}
+            </div>
+          )}
+
+          <div className="p-2.5 rounded-xl bg-[#faf6f0] border border-[#ebdcca] text-xs">
+            <span className="text-[#766a5e]">Cliente: </span>
+            <strong className="text-[#2d251e] font-bold">
+              {installmentToEdit?.clients?.name}
+            </strong>{' '}
+            (Parc. {installmentToEdit?.installment_number}/{installmentToEdit?.total_installments})
+          </div>
+
+          <div className="space-y-1">
+            <label className="text-xs font-semibold text-[#2d251e]">
+              Valor da Parcela *
+            </label>
+            <CurrencyInput
+              value={editAmount}
+              onChange={setEditAmount}
+              className="bg-white font-bold"
+            />
+          </div>
+
+          <div className="space-y-1">
+            <label className="text-xs font-semibold text-[#2d251e]">
+              Data de Vencimento *
+            </label>
+            <Input
+              type="date"
+              required
+              value={editDueDate}
+              onChange={(e) => setEditDueDate(e.target.value)}
+              className="bg-white"
+            />
+          </div>
+
+          <div className="space-y-1">
+            <label className="text-xs font-semibold text-[#2d251e]">
+              Anotações da Parcela (opcional)
+            </label>
+            <Textarea
+              placeholder="Ex: Vencimento prorrogado a pedido da cliente..."
+              value={editNotes}
+              onChange={(e) => setEditNotes(e.target.value)}
+              className="bg-white"
+            />
+          </div>
+
+          <div className="pt-2 flex gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setInstallmentToEdit(null)}
+              className="w-1/2"
+            >
+              Cancelar
+            </Button>
+            <Button
+              type="submit"
+              className="w-1/2 font-semibold shadow-md"
+              isLoading={savingEdit}
+            >
+              Salvar Alterações
+            </Button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* Modal Confirmação de Exclusão de Parcela */}
+      <Modal
+        isOpen={!!installmentToDelete}
+        onClose={() => setInstallmentToDelete(null)}
+        title="Excluir Parcela"
+        description="Esta ação removerá esta cobrança do sistema"
+      >
+        <div className="space-y-4">
+          <div className="p-3.5 rounded-xl bg-red-50 border border-red-200 flex items-start gap-3">
+            <AlertTriangle className="w-5 h-5 text-red-600 shrink-0 mt-0.5" />
+            <div className="text-xs text-red-700 space-y-1">
+              <p className="font-bold">
+                Tem certeza que deseja excluir esta parcela?
+              </p>
+              <p>
+                Cliente: <strong className="font-semibold">{installmentToDelete?.clients?.name}</strong>
+              </p>
+              <p>
+                Valor: <strong className="font-semibold">{formatCurrency(Number(installmentToDelete?.amount || 0))}</strong>
+              </p>
+              <p>
+                Vencimento: <strong className="font-semibold">{installmentToDelete?.due_date ? formatDateBR(installmentToDelete.due_date) : ''}</strong>
+              </p>
+            </div>
+          </div>
+
+          <div className="flex gap-2.5">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setInstallmentToDelete(null)}
+              className="w-1/2"
+              disabled={deletingInstallment}
+            >
+              Cancelar
+            </Button>
+            <Button
+              type="button"
+              variant="danger"
+              onClick={handleConfirmDelete}
+              className="w-1/2 font-bold"
+              isLoading={deletingInstallment}
+            >
+              Sim, Excluir
+            </Button>
+          </div>
+        </div>
       </Modal>
     </div>
   );
