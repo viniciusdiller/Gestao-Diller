@@ -32,6 +32,7 @@ export async function getInstallmentsAction() {
       status,
       paid_at,
       paid_amount,
+      payment_method,
       notes,
       clients (
         id,
@@ -138,6 +139,7 @@ export async function revertInstallmentPaymentAction(installmentId: string) {
       status: 'pending',
       paid_at: null,
       paid_amount: null,
+      payment_method: null,
       updated_at: new Date().toISOString(),
     })
     .eq('id', installmentId)
