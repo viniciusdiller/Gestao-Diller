@@ -38,3 +38,4 @@ describe('API Route contracts and manifests', () => {
     expect(status).toBe('pending');
   });
 });
+
