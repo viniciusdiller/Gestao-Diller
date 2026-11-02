@@ -119,7 +119,7 @@ export default function LoginPage() {
                 <Input
                   type="email"
                   required
-                  placeholder="renata@semijoias.com"
+                  placeholder="seu email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   className="bg-white"

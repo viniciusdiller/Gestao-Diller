@@ -21,7 +21,7 @@ export default async function DashboardLayout({
   return (
     <div className="min-h-screen flex flex-col bg-[#f0e9df] text-[#2d251e]">
       <Header />
-      <main className="flex-1 w-full max-w-md mx-auto px-4 py-4 pb-28">
+      <main className="flex-1 w-full max-w-5xl lg:max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 pb-28 md:pb-12 transition-all">
         {children}
       </main>
       <BottomNav />

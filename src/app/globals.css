@@ -41,9 +41,10 @@ body {
   overscroll-behavior-y: none;
 }
 
-/* Touch Friendly Styles */
-button, a, input, select, textarea {
+/* Touch & Cursor Controls */
+button, a, select, [role="button"] {
   touch-action: manipulation;
+  cursor: pointer;
 }
 
 /* Safe area for mobile notch and navigation bars */

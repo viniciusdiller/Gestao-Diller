@@ -41,7 +41,7 @@ export function BottomNav() {
   ];
 
   return (
-    <nav className="fixed bottom-2 left-3 right-3 z-40 max-w-md mx-auto">
+    <nav className="fixed bottom-2 left-3 right-3 z-40 max-w-md mx-auto md:hidden">
       <div className="rounded-3xl bg-[#fdfbf8]/95 backdrop-blur-xl border border-[#dfd5c4] px-2 py-1.5 shadow-[0_10px_30px_rgba(45,35,25,0.10)] grid grid-cols-4 gap-1">
         {navItems.map((item) => {
           const Icon = item.icon;

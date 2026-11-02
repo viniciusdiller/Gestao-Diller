@@ -238,7 +238,7 @@ export default function ClientesPage() {
           </Button>
         </div>
       ) : (
-        <div className="space-y-2.5">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
           {filteredClients.map((client) => {
             const cleanPhone = sanitizePhoneForWhatsApp(client.phone || '');
             const waUrl = cleanPhone ? `https://wa.me/${cleanPhone}` : null;
@@ -247,7 +247,7 @@ export default function ClientesPage() {
               <Card
                 key={client.id}
                 onClick={() => handleOpenDetails(client.id)}
-                className="p-3.5 bg-white border-[#e4dcd0] hover:border-[#977f5a] active:scale-[0.99] transition-all cursor-pointer shadow-xs flex items-center justify-between"
+                className="p-4 bg-white border-[#e4dcd0] hover:border-[#977f5a] hover:shadow-md hover:-translate-y-0.5 active:scale-[0.99] transition-all duration-200 cursor-pointer shadow-xs flex items-center justify-between"
               >
                 <div className="min-w-0 pr-2">
                   <h3 className="text-sm font-bold text-[#2d251e] truncate">

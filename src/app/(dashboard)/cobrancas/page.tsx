@@ -299,7 +299,7 @@ export default function CobrancasPage() {
           </p>
         </div>
       ) : (
-        <div className="space-y-3">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
           {currentList.map((inst) => {
             const isOverdue = inst.status === 'pending' && inst.due_date < todayStr;
             const isToday = inst.status === 'pending' && inst.due_date === todayStr;
@@ -319,7 +319,7 @@ export default function CobrancasPage() {
             return (
               <Card
                 key={inst.id}
-                className={`p-3.5 bg-white shadow-xs border transition-all ${
+                className={`p-4 bg-white shadow-xs border hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 flex flex-col justify-between ${
                   isOverdue
                     ? 'border-red-300 bg-red-50/20'
                     : isToday
