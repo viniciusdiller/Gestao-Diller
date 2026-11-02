@@ -18,6 +18,27 @@ describe('WhatsApp Billing Service', () => {
     expect(sanitizePhoneForWhatsApp('5519999991111')).toBe('5519999991111');
   });
 
+  it('lida com segurança para telefones vazios ou indefinidos', () => {
+    expect(sanitizePhoneForWhatsApp('')).toBe('');
+    expect(sanitizePhoneForWhatsApp(null)).toBe('');
+    expect(sanitizePhoneForWhatsApp(undefined)).toBe('');
+
+    const billingUrl = getWhatsAppBillingUrl('', {
+      clientName: 'Cliente Sem Telefone',
+      amount: 100,
+      dueDate: '2026-11-20',
+    });
+    expect(billingUrl).toBe('');
+
+    const receiptUrl = getWhatsAppReceiptUrl(null, {
+      clientName: 'Cliente Sem Telefone',
+      description: 'Colar',
+      amount: 100,
+      paymentMethod: 'pix',
+    });
+    expect(receiptUrl).toBe('');
+  });
+
   it('gera mensagem de cobrança amigável com valor em R$ e primeiro nome', () => {
     const msg = generateBillingMessage({
       clientName: 'Carla Beatriz Alcantara',
