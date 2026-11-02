@@ -3,6 +3,8 @@ import {
   sanitizePhoneForWhatsApp,
   generateBillingMessage,
   getWhatsAppBillingUrl,
+  generateSaleReceiptMessage,
+  getWhatsAppReceiptUrl,
 } from '../lib/services/whatsapp';
 
 describe('WhatsApp Billing Service', () => {
@@ -42,5 +44,31 @@ describe('WhatsApp Billing Service', () => {
 
     expect(url.startsWith('https://wa.me/5511987654321?text=')).toBe(true);
     expect(url).toContain(encodeURIComponent('Oi, Juliana!'));
+  });
+
+  it('gera comprovante de venda amigável no WhatsApp com detalhes da peça', () => {
+    const receipt = generateSaleReceiptMessage({
+      clientName: 'Fernanda Oliveira',
+      description: 'Anel Solitário e Brinco Pérola',
+      amount: 280,
+      paymentMethod: 'pix',
+    });
+
+    expect(receipt).toContain('Oi, Fernanda!');
+    expect(receipt).toContain('Anel Solitário e Brinco Pérola');
+    expect(receipt).toContain('280,00');
+    expect(receipt).toContain('PIX');
+  });
+
+  it('gera link de comprovante wa.me formatado', () => {
+    const url = getWhatsAppReceiptUrl('11977776666', {
+      clientName: 'Larissa Manoela',
+      description: 'Colar Gravatinha',
+      amount: 190,
+      paymentMethod: 'cartao_credito',
+    });
+
+    expect(url.startsWith('https://wa.me/5511977776666?text=')).toBe(true);
+    expect(url).toContain(encodeURIComponent('Colar Gravatinha'));
   });
 });
