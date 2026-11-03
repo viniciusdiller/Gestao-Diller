@@ -54,8 +54,13 @@ export const CreateReservaSchema = z.object({
   data_checkin: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Data de check-in inválida (AAAA-MM-DD).'),
   data_checkout: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Data de check-out inválida (AAAA-MM-DD).'),
   valor_diaria: z.number().min(0, 'Valor da diária não pode ser negativo.'),
-  taxa_limpeza: z.number().min(0, 'Taxa de limpeza não pode ser negativa.').default(0),
-  taxa_plataforma: z.number().min(0, 'Taxa da plataforma não pode ser negativa.').default(0),
+  taxa_limpeza: z.number().min(0, 'Taxa de limpeza não pode ser negativa.').default(180),
+  taxa_plataforma_percentual: z.number().min(0).max(100, 'Taxa da plataforma não pode ultrapassar 100%.').default(0),
+  taxa_plataforma: z.number().min(0, 'Taxa da plataforma não pode ser negativa.').default(0).optional(),
+  tem_comissao_dani: z.boolean().default(false),
+  taxa_dani_percentual: z.number().min(0).max(100, 'Comissão da Dani não pode ultrapassar 100%.').default(20),
+  valor_comissao_dani: z.number().min(0).default(0).optional(),
+  lucro_liquido_real: z.number().default(0).optional(),
   origem: AluguelOrigemEnum.default('direto'),
   status: AluguelStatusEnum.default('confirmada'),
   status_pagamento: AluguelStatusPagamentoEnum.default('pendente'),
@@ -65,7 +70,8 @@ export const CreateReservaSchema = z.object({
   message: 'Data de check-out deve ser posterior à data de check-in.',
   path: ['data_checkout'],
 });
-export type CreateReservaInput = z.infer<typeof CreateReservaSchema>;
+export type CreateReservaInput = z.input<typeof CreateReservaSchema>;
+export type CreateReservaOutput = z.infer<typeof CreateReservaSchema>;
 
 export const UpdateReservaSchema = z.object({
   id: z.string().uuid('ID da reserva inválido.'),
@@ -74,7 +80,12 @@ export const UpdateReservaSchema = z.object({
   data_checkout: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
   valor_diaria: z.number().min(0).optional(),
   taxa_limpeza: z.number().min(0).optional(),
+  taxa_plataforma_percentual: z.number().min(0).max(100).optional(),
   taxa_plataforma: z.number().min(0).optional(),
+  tem_comissao_dani: z.boolean().optional(),
+  taxa_dani_percentual: z.number().min(0).max(100).optional(),
+  valor_comissao_dani: z.number().min(0).optional(),
+  lucro_liquido_real: z.number().optional(),
   origem: AluguelOrigemEnum.optional(),
   status: AluguelStatusEnum.optional(),
   status_pagamento: AluguelStatusPagamentoEnum.optional(),
@@ -108,3 +119,4 @@ export const UpdateDespesaSchema = CreateDespesaSchema.extend({
   id: z.string().uuid('ID inválido.'),
 });
 export type UpdateDespesaInput = z.infer<typeof UpdateDespesaSchema>;
+

@@ -40,7 +40,12 @@ export async function getReservasAction(params?: GetReservasParams) {
       num_diarias,
       valor_diaria,
       taxa_limpeza,
+      taxa_plataforma_percentual,
       taxa_plataforma,
+      tem_comissao_dani,
+      taxa_dani_percentual,
+      valor_comissao_dani,
+      lucro_liquido_real,
       origem,
       valor_total,
       status,
@@ -70,12 +75,12 @@ export async function getReservasAction(params?: GetReservasParams) {
   }
 
   if (params?.month) {
-    // Filtra reservas que começam no mês ou cruzam o mês
+    const [yStr, mStr] = params.month.split('-');
+    const y = parseInt(yStr, 10);
+    const m = parseInt(mStr, 10);
+    const lastDay = new Date(y, m, 0).getDate();
     const startOfMonth = `${params.month}-01`;
-    const nextMonthYear = parseInt(params.month.split('-')[0], 10);
-    const nextMonthMonth = parseInt(params.month.split('-')[1], 10);
-    const endOfMonthDate = new Date(nextMonthYear, nextMonthMonth, 0);
-    const endOfMonth = endOfMonthDate.toISOString().slice(0, 10);
+    const endOfMonth = `${params.month}-${String(lastDay).padStart(2, '0')}`;
 
     query = query
       .lte('data_checkin', endOfMonth)
@@ -117,7 +122,10 @@ export async function createReservaAction(rawInput: CreateReservaInput) {
     data_checkout,
     valor_diaria,
     taxa_limpeza,
+    taxa_plataforma_percentual,
     taxa_plataforma,
+    tem_comissao_dani,
+    taxa_dani_percentual,
     origem,
     status,
     status_pagamento,
@@ -149,7 +157,10 @@ export async function createReservaAction(rawInput: CreateReservaInput) {
     checkout: data_checkout,
     valorDiaria: valor_diaria,
     taxaLimpeza: taxa_limpeza,
+    taxaPlataformaPercentual: taxa_plataforma_percentual,
     taxaPlataforma: taxa_plataforma,
+    temComissaoDani: tem_comissao_dani,
+    taxaDaniPercentual: taxa_dani_percentual,
   });
 
   const { data: newReserva, error } = await supabase
@@ -161,8 +172,13 @@ export async function createReservaAction(rawInput: CreateReservaInput) {
       data_checkout,
       num_diarias: totals.num_diarias,
       valor_diaria,
-      taxa_limpeza,
-      taxa_plataforma,
+      taxa_limpeza: totals.taxa_limpeza,
+      taxa_plataforma_percentual: totals.taxa_plataforma_percentual,
+      taxa_plataforma: totals.taxa_plataforma,
+      tem_comissao_dani: totals.tem_comissao_dani,
+      taxa_dani_percentual: totals.taxa_dani_percentual,
+      valor_comissao_dani: totals.valor_comissao_dani,
+      lucro_liquido_real: totals.lucro_liquido_real,
       origem,
       valor_total: totals.valor_total,
       status,
@@ -232,10 +248,26 @@ export async function updateReservaAction(rawInput: UpdateReservaInput) {
     updates.taxa_limpeza !== undefined
       ? updates.taxa_limpeza
       : Number(currentReserva.taxa_limpeza);
+  const taxaPlataformaPercentual =
+    updates.taxa_plataforma_percentual !== undefined
+      ? updates.taxa_plataforma_percentual
+      : currentReserva.taxa_plataforma_percentual !== null
+      ? Number(currentReserva.taxa_plataforma_percentual)
+      : undefined;
   const taxaPlataforma =
     updates.taxa_plataforma !== undefined
       ? updates.taxa_plataforma
       : Number(currentReserva.taxa_plataforma);
+  const temComissaoDani =
+    updates.tem_comissao_dani !== undefined
+      ? updates.tem_comissao_dani
+      : Boolean(currentReserva.tem_comissao_dani);
+  const taxaDaniPercentual =
+    updates.taxa_dani_percentual !== undefined
+      ? updates.taxa_dani_percentual
+      : currentReserva.taxa_dani_percentual !== null
+      ? Number(currentReserva.taxa_dani_percentual)
+      : 20;
 
   // Se mudou datas ou status, checa conflito
   if (
@@ -266,7 +298,10 @@ export async function updateReservaAction(rawInput: UpdateReservaInput) {
     checkout,
     valorDiaria,
     taxaLimpeza,
+    taxaPlataformaPercentual,
     taxaPlataforma,
+    temComissaoDani,
+    taxaDaniPercentual,
   });
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -274,6 +309,13 @@ export async function updateReservaAction(rawInput: UpdateReservaInput) {
     ...updates,
     num_diarias: totals.num_diarias,
     valor_total: totals.valor_total,
+    taxa_limpeza: totals.taxa_limpeza,
+    taxa_plataforma_percentual: totals.taxa_plataforma_percentual,
+    taxa_plataforma: totals.taxa_plataforma,
+    tem_comissao_dani: totals.tem_comissao_dani,
+    taxa_dani_percentual: totals.taxa_dani_percentual,
+    valor_comissao_dani: totals.valor_comissao_dani,
+    lucro_liquido_real: totals.lucro_liquido_real,
     updated_at: new Date().toISOString(),
   };
 
@@ -335,3 +377,4 @@ export async function deleteReservaAction(reservaId: string) {
   revalidatePath('/itauna');
   return { success: true };
 }
+

@@ -198,3 +198,4 @@ export async function deleteHospedeAction(hospedeId: string) {
   revalidatePath('/itauna');
   return { success: true };
 }
+

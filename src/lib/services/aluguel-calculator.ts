@@ -3,8 +3,14 @@ export interface ReservaCalculada {
   subtotal_diarias: number;
   taxa_limpeza: number;
   valor_total: number;
+  taxa_plataforma_percentual: number;
   taxa_plataforma: number;
+  saldo_apos_plataforma_e_faxina: number;
+  tem_comissao_dani: boolean;
+  taxa_dani_percentual: number;
+  valor_comissao_dani: number;
   lucro_liquido_reserva: number;
+  lucro_liquido_real: number;
 }
 
 /**
@@ -21,33 +27,71 @@ export function calculateNights(checkinStr: string, checkoutStr: string): number
 
 /**
  * Calcula os totais financeiros de uma reserva:
- * - Subtotal: noites * valor_diaria
- * - Total Cobrado: subtotal + taxa_limpeza
- * - Lucro Líquido da Reserva: Total - taxa_plataforma
+ * 1. Subtotal diárias: num_diarias * valor_diaria
+ * 2. Total cobrado da reserva: subtotal + taxa_limpeza (padrão R$ 180,00)
+ * 3. Taxa da plataforma: % sobre o valor total (ex: 16% Airbnb)
+ * 4. Saldo pós plataforma e faxina: Total - taxa_plataforma - taxa_limpeza
+ * 5. Comissão da Dani: 20% sobre o saldo restante (se marcada)
+ * 6. Lucro Líquido Real dos proprietários: saldo - comissao_dani
  */
 export function calculateReservaTotals(params: {
   checkin: string;
   checkout: string;
   valorDiaria: number;
   taxaLimpeza?: number;
+  taxaPlataformaPercentual?: number;
   taxaPlataforma?: number;
+  temComissaoDani?: boolean;
+  taxaDaniPercentual?: number;
 }): ReservaCalculada {
   const num_diarias = calculateNights(params.checkin, params.checkout);
   const valorDiaria = Math.max(0, params.valorDiaria || 0);
-  const taxa_limpeza = Math.max(0, params.taxaLimpeza || 0);
-  const taxa_plataforma = Math.max(0, params.taxaPlataforma || 0);
+  const taxa_limpeza = params.taxaLimpeza !== undefined ? Math.max(0, params.taxaLimpeza) : 180;
 
   const subtotal_diarias = Math.round(num_diarias * valorDiaria * 100) / 100;
   const valor_total = Math.round((subtotal_diarias + taxa_limpeza) * 100) / 100;
-  const lucro_liquido_reserva = Math.round((valor_total - taxa_plataforma) * 100) / 100;
+
+  let taxa_plataforma_percentual = 0;
+  let taxa_plataforma = 0;
+
+  if (params.taxaPlataformaPercentual !== undefined && params.taxaPlataformaPercentual > 0) {
+    taxa_plataforma_percentual = Math.max(0, Math.min(100, params.taxaPlataformaPercentual));
+    taxa_plataforma = Math.round((valor_total * (taxa_plataforma_percentual / 100)) * 100) / 100;
+  } else if (params.taxaPlataforma !== undefined && params.taxaPlataforma > 0) {
+    taxa_plataforma = Math.max(0, params.taxaPlataforma);
+    taxa_plataforma_percentual = valor_total > 0 ? Math.round(((taxa_plataforma / valor_total) * 100) * 100) / 100 : 0;
+  }
+
+  const saldo_apos_plataforma_e_faxina = Math.max(
+    0,
+    Math.round((valor_total - taxa_plataforma - taxa_limpeza) * 100) / 100
+  );
+
+  const tem_comissao_dani = Boolean(params.temComissaoDani);
+  const taxa_dani_percentual =
+    params.taxaDaniPercentual !== undefined
+      ? Math.max(0, Math.min(100, params.taxaDaniPercentual))
+      : 20;
+
+  const valor_comissao_dani = tem_comissao_dani
+    ? Math.round((saldo_apos_plataforma_e_faxina * (taxa_dani_percentual / 100)) * 100) / 100
+    : 0;
+
+  const lucro_liquido_real = Math.round((saldo_apos_plataforma_e_faxina - valor_comissao_dani) * 100) / 100;
 
   return {
     num_diarias,
     subtotal_diarias,
     taxa_limpeza,
     valor_total,
+    taxa_plataforma_percentual,
     taxa_plataforma,
-    lucro_liquido_reserva,
+    saldo_apos_plataforma_e_faxina,
+    tem_comissao_dani,
+    taxa_dani_percentual,
+    valor_comissao_dani,
+    lucro_liquido_reserva: lucro_liquido_real,
+    lucro_liquido_real,
   };
 }
 
@@ -99,7 +143,9 @@ export function checkVacancyStatus(reservas: ReservaItem[], targetDateStr: strin
 export function calculateMonthlyProfit(params: {
   reservas: Array<{
     valor_total: number;
-    taxa_plataforma: number;
+    taxa_plataforma?: number;
+    valor_comissao_dani?: number;
+    lucro_liquido_real?: number;
     status: string;
     data_checkin: string;
   }>;
@@ -123,6 +169,11 @@ export function calculateMonthlyProfit(params: {
     0
   );
 
+  const totalComissoesDani = monthReservas.reduce(
+    (acc, r) => acc + Number(r.valor_comissao_dani || 0),
+    0
+  );
+
   const monthDespesas = params.despesas.filter((d) =>
     d.data_despesa.startsWith(params.monthPrefix)
   );
@@ -132,12 +183,20 @@ export function calculateMonthlyProfit(params: {
     0
   );
 
-  const lucroLiquidoReal =
-    Math.round((faturamentoBruto - totalComissoes - totalDespesas) * 100) / 100;
+  // Se a reserva já tiver lucro_liquido_real calculado, soma os lucros das reservas menos despesas avulsas
+  const temLucroCalculado = monthReservas.some((r) => r.lucro_liquido_real !== undefined);
+  const lucroLiquidoReal = temLucroCalculado
+    ? Math.round(
+        (monthReservas.reduce((acc, r) => acc + Number(r.lucro_liquido_real ?? (r.valor_total - (r.taxa_plataforma || 0))), 0) -
+          totalDespesas) *
+          100
+      ) / 100
+    : Math.round((faturamentoBruto - totalComissoes - totalComissoesDani - totalDespesas) * 100) / 100;
 
   return {
     faturamentoBruto: Math.round(faturamentoBruto * 100) / 100,
     totalComissoes: Math.round(totalComissoes * 100) / 100,
+    totalComissoesDani: Math.round(totalComissoesDani * 100) / 100,
     totalDespesas: Math.round(totalDespesas * 100) / 100,
     lucroLiquidoReal,
     reservasCount: monthReservas.length,
@@ -162,3 +221,4 @@ export function hasDateConflict(
     return newCheckin < r.data_checkout && newCheckout > r.data_checkin;
   });
 }
+

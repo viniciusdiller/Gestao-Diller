@@ -23,3 +23,17 @@ export function formatDateBR(dateInput: string | Date): string {
 }
 
 export { sanitizePhoneForWhatsApp } from '@/lib/services/whatsapp';
+
+/**
+ * Retorna a data de hoje no formato YYYY-MM-DD no fuso de São Paulo (UTC-3)
+ * Imune a desvios de timezone UTC.
+ */
+export function getTodayDateString(timeZone: string = 'America/Sao_Paulo'): string {
+  const formatter = new Intl.DateTimeFormat('en-CA', {
+    timeZone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  });
+  return formatter.format(new Date());
+}

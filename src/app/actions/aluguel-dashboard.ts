@@ -5,6 +5,7 @@ import {
   checkVacancyStatus,
   calculateMonthlyProfit,
 } from '@/lib/services/aluguel-calculator';
+import { getTodayDateString } from '@/lib/utils';
 
 export async function getAluguelDashboardDataAction() {
   const supabase = await createClient();
@@ -16,8 +17,7 @@ export async function getAluguelDashboardDataAction() {
     return { success: false, error: 'Não autenticado' };
   }
 
-  const now = new Date();
-  const todayStr = now.toISOString().slice(0, 10);
+  const todayStr = getTodayDateString();
   const currentMonthStr = todayStr.slice(0, 7); // AAAA-MM
 
   // 1. Busca todas as reservas ativas
@@ -31,7 +31,12 @@ export async function getAluguelDashboardDataAction() {
       num_diarias,
       valor_diaria,
       taxa_limpeza,
+      taxa_plataforma_percentual,
       taxa_plataforma,
+      tem_comissao_dani,
+      taxa_dani_percentual,
+      valor_comissao_dani,
+      lucro_liquido_real,
       origem,
       valor_total,
       status,
@@ -71,7 +76,9 @@ export async function getAluguelDashboardDataAction() {
     hospede_nome: r.aluguel_hospedes?.nome || 'Hóspede',
     hospede_telefone: r.aluguel_hospedes?.telefone,
     valor_total: Number(r.valor_total),
-    taxa_plataforma: Number(r.taxa_plataforma),
+    taxa_plataforma: Number(r.taxa_plataforma || 0),
+    valor_comissao_dani: Number(r.valor_comissao_dani || 0),
+    lucro_liquido_real: r.lucro_liquido_real !== null ? Number(r.lucro_liquido_real) : undefined,
   }));
 
   const vacancy = checkVacancyStatus(mappedReservas, todayStr);
@@ -109,3 +116,4 @@ export async function getAluguelDashboardDataAction() {
     despesas: despesas || [],
   };
 }
+
