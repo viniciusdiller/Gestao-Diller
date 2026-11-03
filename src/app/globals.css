@@ -64,3 +64,90 @@ button, a, select, [role="button"] {
   -ms-overflow-style: none;
   scrollbar-width: none;
 }
+
+/* ==========================================================================
+   Mobile-First Micro-Interactions & Hardware-Accelerated Animations
+   Inspired by Emil Kowalski's Design Engineering principles
+   ========================================================================== */
+
+@keyframes slideUpFade {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes popIn {
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes drawerSlideUp {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+@keyframes pulseSubtle {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.02);
+  }
+}
+
+/* Animações fluidas com curvas de aceleração naturais (ease-out forte) */
+.animate-slide-up {
+  animation: slideUpFade 220ms cubic-bezier(0.23, 1, 0.32, 1) both;
+}
+
+.animate-pop {
+  animation: popIn 180ms cubic-bezier(0.23, 1, 0.32, 1) both;
+}
+
+.animate-drawer {
+  animation: drawerSlideUp 260ms cubic-bezier(0.32, 0.72, 0, 1) both;
+}
+
+.animate-pulse-subtle {
+  animation: pulseSubtle 2s ease-in-out infinite;
+}
+
+/* Staggers para listas no celular (evita sensação de carregamento bruto) */
+.stagger-1 { animation-delay: 25ms; }
+.stagger-2 { animation-delay: 50ms; }
+.stagger-3 { animation-delay: 75ms; }
+.stagger-4 { animation-delay: 100ms; }
+.stagger-5 { animation-delay: 125ms; }
+.stagger-6 { animation-delay: 150ms; }
+
+/* Feedback tátil imediato no toque (mobile press feel) */
+.touch-card {
+  transition: transform 120ms cubic-bezier(0.23, 1, 0.32, 1), box-shadow 120ms ease;
+  will-change: transform;
+}
+.touch-card:active {
+  transform: scale(0.985);
+}
+
+.touch-pill {
+  transition: transform 100ms cubic-bezier(0.23, 1, 0.32, 1), background-color 150ms ease;
+  will-change: transform;
+}
+.touch-pill:active {
+  transform: scale(0.94);
+}

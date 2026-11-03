@@ -97,7 +97,7 @@ async function DashboardContent() {
       {/* Grid de KPIs (2 cols no mobile, 4 cols no desktop) */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-4">
         {/* KPI 1: Faturamento do Mês */}
-        <Card className="p-4 bg-[#ffffff] border-[#e4dcd0] shadow-xs hover:shadow-md hover:-translate-y-0.5 transition-all duration-200">
+        <Card className="p-4 bg-[#ffffff] border-[#e4dcd0] shadow-xs hover:shadow-md hover:-translate-y-0.5 touch-card animate-slide-up stagger-1 transition-all duration-200">
           <div className="flex items-center justify-between pb-1">
             <span className="text-[11px] sm:text-xs font-medium text-[#766a5e]">
               Faturamento (Mês)
@@ -115,7 +115,7 @@ async function DashboardContent() {
         </Card>
 
         {/* KPI 2: Total a Receber */}
-        <Card className="p-4 bg-[#ffffff] border-[#e4dcd0] shadow-xs hover:shadow-md hover:-translate-y-0.5 transition-all duration-200">
+        <Card className="p-4 bg-[#ffffff] border-[#e4dcd0] shadow-xs hover:shadow-md hover:-translate-y-0.5 touch-card animate-slide-up stagger-2 transition-all duration-200">
           <div className="flex items-center justify-between pb-1">
             <span className="text-[11px] sm:text-xs font-medium text-[#766a5e]">
               Total a Receber
@@ -133,7 +133,7 @@ async function DashboardContent() {
         </Card>
 
         {/* KPI 3: Total em Atraso */}
-        <Card className="p-4 bg-[#ffffff] border-[#e4dcd0] shadow-xs hover:shadow-md hover:-translate-y-0.5 transition-all duration-200">
+        <Card className="p-4 bg-[#ffffff] border-[#e4dcd0] shadow-xs hover:shadow-md hover:-translate-y-0.5 touch-card animate-slide-up stagger-3 transition-all duration-200">
           <div className="flex items-center justify-between pb-1">
             <span className="text-[11px] sm:text-xs font-medium text-[#766a5e]">
               Vencidos / Atraso
@@ -151,7 +151,7 @@ async function DashboardContent() {
         </Card>
 
         {/* KPI 4: Vendas Realizadas */}
-        <Card className="p-4 bg-[#ffffff] border-[#e4dcd0] shadow-xs hover:shadow-md hover:-translate-y-0.5 transition-all duration-200">
+        <Card className="p-4 bg-[#ffffff] border-[#e4dcd0] shadow-xs hover:shadow-md hover:-translate-y-0.5 touch-card animate-slide-up stagger-4 transition-all duration-200">
           <div className="flex items-center justify-between pb-1">
             <span className="text-[11px] sm:text-xs font-medium text-[#766a5e]">
               Vendas no Mês
@@ -189,7 +189,7 @@ async function DashboardContent() {
                 </div>
               </CardHeader>
               <CardContent className="p-4 pt-0 space-y-2.5">
-                {overdueAlerts.slice(0, 3).map((inst) => {
+                {overdueAlerts.slice(0, 3).map((inst, idx) => {
                   const waUrl = inst.client_phone
                     ? getWhatsAppBillingUrl(inst.client_phone, {
                         clientName: inst.client_name || 'Cliente',
@@ -203,7 +203,7 @@ async function DashboardContent() {
                   return (
                     <div
                       key={inst.id}
-                      className="flex items-center justify-between p-2.5 rounded-xl bg-red-50/70 border border-red-200/80 hover:bg-red-50 transition-colors"
+                      className={`flex items-center justify-between p-2.5 rounded-xl bg-red-50/70 border border-red-200/80 hover:bg-red-50 transition-colors animate-slide-up stagger-${idx + 1}`}
                     >
                       <div className="min-w-0 pr-2">
                         <div className="flex items-center gap-1.5">
@@ -227,7 +227,7 @@ async function DashboardContent() {
                           href={waUrl}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-[#25D366] hover:bg-[#1fa851] text-white text-xs font-semibold shadow-xs active:scale-95 transition-all shrink-0 cursor-pointer"
+                          className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-[#25D366] hover:bg-[#1fa851] text-white text-xs font-semibold shadow-xs active:scale-90 transition-transform duration-100 shrink-0 cursor-pointer"
                           title="Cobrar pelo WhatsApp"
                         >
                           <MessageCircle className="w-3.5 h-3.5" /> Cobrar
@@ -241,7 +241,7 @@ async function DashboardContent() {
                   );
                 })}
 
-                {dueSoonAlerts.slice(0, 2).map((inst) => {
+                {dueSoonAlerts.slice(0, 2).map((inst, idx) => {
                   const waUrl = inst.client_phone
                     ? getWhatsAppBillingUrl(inst.client_phone, {
                         clientName: inst.client_name || 'Cliente',
@@ -255,7 +255,7 @@ async function DashboardContent() {
                   return (
                     <div
                       key={inst.id}
-                      className="flex items-center justify-between p-2.5 rounded-xl bg-amber-50/70 border border-amber-200/80 hover:bg-amber-50 transition-colors"
+                      className={`flex items-center justify-between p-2.5 rounded-xl bg-amber-50/70 border border-amber-200/80 hover:bg-amber-50 transition-colors animate-slide-up stagger-${idx + 1}`}
                     >
                       <div className="min-w-0 pr-2">
                         <div className="flex items-center gap-1.5">
@@ -279,7 +279,7 @@ async function DashboardContent() {
                           href={waUrl}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-[#25D366] hover:bg-[#1fa851] text-white text-xs font-semibold shadow-xs active:scale-95 transition-all shrink-0 cursor-pointer"
+                          className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-[#25D366] hover:bg-[#1fa851] text-white text-xs font-semibold shadow-xs active:scale-90 transition-transform duration-100 shrink-0 cursor-pointer"
                           title="Lembrar pelo WhatsApp"
                         >
                           <MessageCircle className="w-3.5 h-3.5" /> Lembrar
@@ -416,7 +416,7 @@ async function DashboardContent() {
               {partnerBrands.map((brand) => (
                 <span
                   key={brand}
-                  className="px-3 py-1.5 rounded-xl bg-[#faf6f0] border border-[#e4dcd0] text-xs font-medium text-[#52463b] hover:border-[#977f5a] hover:bg-white transition-all cursor-pointer shadow-2xs"
+                  className="px-3 py-1.5 rounded-xl bg-[#faf6f0] border border-[#e4dcd0] text-xs font-medium text-[#52463b] hover:border-[#977f5a] hover:bg-white touch-pill transition-all cursor-pointer shadow-2xs"
                 >
                   {brand}
                 </span>

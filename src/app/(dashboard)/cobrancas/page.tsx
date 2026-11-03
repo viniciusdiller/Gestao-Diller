@@ -257,7 +257,7 @@ export default function CobrancasPage() {
       <div className="flex gap-1.5 overflow-x-auto pb-1 no-scrollbar text-xs">
         <button
           onClick={() => setActiveTab('overdue')}
-          className={`flex items-center gap-1.5 px-3 py-2 rounded-xl font-bold transition-all shrink-0 ${
+          className={`flex items-center gap-1.5 px-3 py-2 rounded-xl font-bold touch-pill transition-all shrink-0 ${
             activeTab === 'overdue'
               ? 'bg-[#b91c1c] text-white shadow-xs'
               : 'bg-white text-[#766a5e] border border-[#dfd5c4]'
@@ -269,7 +269,7 @@ export default function CobrancasPage() {
 
         <button
           onClick={() => setActiveTab('today')}
-          className={`flex items-center gap-1.5 px-3 py-2 rounded-xl font-bold transition-all shrink-0 ${
+          className={`flex items-center gap-1.5 px-3 py-2 rounded-xl font-bold touch-pill transition-all shrink-0 ${
             activeTab === 'today'
               ? 'bg-[#b45309] text-white shadow-xs'
               : 'bg-white text-[#766a5e] border border-[#dfd5c4]'
@@ -281,7 +281,7 @@ export default function CobrancasPage() {
 
         <button
           onClick={() => setActiveTab('soon')}
-          className={`flex items-center gap-1.5 px-3 py-2 rounded-xl font-bold transition-all shrink-0 ${
+          className={`flex items-center gap-1.5 px-3 py-2 rounded-xl font-bold touch-pill transition-all shrink-0 ${
             activeTab === 'soon'
               ? 'bg-[#977f5a] text-white shadow-xs'
               : 'bg-white text-[#766a5e] border border-[#dfd5c4]'
@@ -293,7 +293,7 @@ export default function CobrancasPage() {
 
         <button
           onClick={() => setActiveTab('paid')}
-          className={`flex items-center gap-1.5 px-3 py-2 rounded-xl font-bold transition-all shrink-0 ${
+          className={`flex items-center gap-1.5 px-3 py-2 rounded-xl font-bold touch-pill transition-all shrink-0 ${
             activeTab === 'paid'
               ? 'bg-[#15803d] text-white shadow-xs'
               : 'bg-white text-[#766a5e] border border-[#dfd5c4]'
@@ -305,7 +305,7 @@ export default function CobrancasPage() {
 
         <button
           onClick={() => setActiveTab('all')}
-          className={`flex items-center gap-1.5 px-3 py-2 rounded-xl font-bold transition-all shrink-0 ${
+          className={`flex items-center gap-1.5 px-3 py-2 rounded-xl font-bold touch-pill transition-all shrink-0 ${
             activeTab === 'all'
               ? 'bg-[#52463b] text-white shadow-xs'
               : 'bg-white text-[#766a5e] border border-[#dfd5c4]'
@@ -336,7 +336,7 @@ export default function CobrancasPage() {
       ) : (
         <div className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
-            {paginatedInstallments.map((inst) => {
+            {paginatedInstallments.map((inst, idx) => {
             const isOverdue = inst.status === 'pending' && inst.due_date < todayStr;
             const isToday = inst.status === 'pending' && inst.due_date === todayStr;
             const isPaid = inst.status === 'paid';
@@ -355,7 +355,8 @@ export default function CobrancasPage() {
             return (
               <Card
                 key={inst.id}
-                className={`p-4 bg-white shadow-xs border hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 flex flex-col justify-between ${
+                style={{ animationDelay: `${Math.min(idx * 30, 150)}ms` }}
+                className={`p-4 bg-white shadow-xs border hover:shadow-md hover:-translate-y-0.5 touch-card animate-slide-up transition-all duration-200 flex flex-col justify-between ${
                   isOverdue
                     ? 'border-red-300 bg-red-50/20'
                     : isToday

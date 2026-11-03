@@ -289,7 +289,7 @@ export default function ClientesPage() {
       ) : (
         <div className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
-            {paginatedClients.map((client) => {
+            {paginatedClients.map((client, idx) => {
               const cleanPhone = sanitizePhoneForWhatsApp(client.phone || '');
               const waUrl = cleanPhone ? `https://wa.me/${cleanPhone}` : null;
 
@@ -297,7 +297,8 @@ export default function ClientesPage() {
                 <Card
                   key={client.id}
                   onClick={() => handleOpenDetails(client.id)}
-                  className="p-4 bg-white border-[#e4dcd0] hover:border-[#977f5a] hover:shadow-md hover:-translate-y-0.5 active:scale-[0.99] transition-all duration-200 cursor-pointer shadow-xs flex items-center justify-between"
+                  style={{ animationDelay: `${Math.min(idx * 30, 150)}ms` }}
+                  className="p-4 bg-white border-[#e4dcd0] hover:border-[#977f5a] hover:shadow-md hover:-translate-y-0.5 touch-card animate-slide-up transition-all duration-200 cursor-pointer shadow-xs flex items-center justify-between"
                 >
                   <div className="min-w-0 pr-2">
                     <h3 className="text-sm font-bold text-[#2d251e] truncate">
@@ -321,7 +322,7 @@ export default function ClientesPage() {
                         target="_blank"
                         rel="noopener noreferrer"
                         onClick={(e) => e.stopPropagation()}
-                        className="w-9 h-9 rounded-full bg-[#25D366]/15 text-[#128C7E] hover:bg-[#25D366] hover:text-white flex items-center justify-center transition-all"
+                        className="w-9 h-9 rounded-full bg-[#25D366]/15 text-[#128C7E] hover:bg-[#25D366] hover:text-white flex items-center justify-center active:scale-90 transition-transform duration-100"
                         title="Abrir WhatsApp"
                       >
                         <MessageCircle className="w-4 h-4" />

@@ -412,7 +412,7 @@ export default function VendasPage() {
       ) : (
         <div className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
-            {paginatedSales.map((sale) => {
+            {paginatedSales.map((sale, idx) => {
               const clientPhone = sale.clients?.phone || '';
               const receiptUrl = clientPhone
                 ? getWhatsAppReceiptUrl(clientPhone, {
@@ -426,7 +426,8 @@ export default function VendasPage() {
               return (
                 <Card
                   key={sale.id}
-                  className="p-4 bg-white border-[#e4dcd0] shadow-xs hover:border-[#977f5a] hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 flex flex-col justify-between"
+                  style={{ animationDelay: `${Math.min(idx * 30, 150)}ms` }}
+                  className="p-4 bg-white border-[#e4dcd0] shadow-xs hover:border-[#977f5a] hover:shadow-md hover:-translate-y-0.5 touch-card animate-slide-up transition-all duration-200 flex flex-col justify-between"
                 >
                   <div className="flex items-start justify-between pb-2 border-b border-[#ebdcca]/70">
                     <div className="min-w-0 pr-2">

@@ -51,7 +51,7 @@ export function BottomNav() {
               href={item.href}
               prefetch={true}
               className={cn(
-                'relative flex flex-col items-center justify-center py-2 px-1 rounded-2xl transition-all duration-200 active:scale-95 min-h-[50px] select-none',
+                'relative flex flex-col items-center justify-center py-2 px-1 rounded-2xl transition-all duration-150 active:scale-90 min-h-[50px] select-none cursor-pointer',
                 item.active
                   ? 'text-[#977f5a] font-bold'
                   : 'text-[#87786b] hover:text-[#28211b]'
@@ -59,10 +59,10 @@ export function BottomNav() {
             >
               <div
                 className={cn(
-                  'p-1.5 rounded-xl transition-all duration-200',
+                  'p-1.5 rounded-xl transition-all duration-150',
                   item.active
-                    ? 'bg-[#977f5a]/15 text-[#977f5a] scale-105 shadow-xs'
-                    : 'text-current hover:bg-black/5'
+                    ? 'bg-[#977f5a]/15 text-[#977f5a] scale-105 shadow-xs animate-pop'
+                    : 'text-current hover:bg-black/5 active:scale-95'
                 )}
               >
                 <Icon className="w-5 h-5 stroke-[2.2]" />
@@ -71,7 +71,7 @@ export function BottomNav() {
                 {item.label}
               </span>
               {item.active && (
-                <span className="absolute bottom-1 w-1.5 h-1.5 rounded-full bg-[#977f5a] shadow-[0_0_6px_#977f5a]" />
+                <span className="absolute bottom-1 w-1.5 h-1.5 rounded-full bg-[#977f5a] shadow-[0_0_6px_#977f5a] animate-pop" />
               )}
             </Link>
           );
