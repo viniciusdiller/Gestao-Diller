@@ -20,20 +20,20 @@ export function Calendar({
   return (
     <div
       className={cn(
-        'p-3 bg-white rounded-2xl border border-[#e4dcd0] shadow-sm inline-block select-none',
+        'p-1 bg-white select-none w-full flex justify-center',
         className
       )}
       style={
         {
-          '--rdp-accent-color': '#977f5a',
-          '--rdp-accent-background-color': '#f5efe6',
-          '--rdp-day-height': '40px',
-          '--rdp-day-width': '40px',
+          '--rdp-accent-color': '#0369a1',
+          '--rdp-accent-background-color': '#e0f2fe',
+          '--rdp-day-height': '36px',
+          '--rdp-day-width': '36px',
           '--rdp-day_button-border-radius': '10px',
-          '--rdp-day_button-height': '38px',
-          '--rdp-day_button-width': '38px',
-          '--rdp-today-color': '#977f5a',
-          '--rdp-selected-border': '2px solid #977f5a',
+          '--rdp-day_button-height': '34px',
+          '--rdp-day_button-width': '34px',
+          '--rdp-today-color': '#0369a1',
+          '--rdp-selected-border': '2px solid #0369a1',
         } as React.CSSProperties
       }
     >
@@ -41,33 +41,35 @@ export function Calendar({
         showOutsideDays={showOutsideDays}
         locale={locale}
         classNames={{
-          root: cn(defaultClassNames.root, 'text-[#2d251e]'),
-          month_caption: cn(
-            defaultClassNames.month_caption,
-            'flex justify-center items-center h-10 font-bold text-sm text-[#2d251e] capitalize'
-          ),
-          caption_label: 'text-sm font-bold text-[#2d251e] capitalize',
-          nav: cn(defaultClassNames.nav, 'flex items-center justify-between w-full absolute inset-x-0 px-2'),
+          root: cn(defaultClassNames.root, 'text-[#0f172a] w-full'),
+          month: 'space-y-2 relative',
+          month_caption: 'relative flex justify-center items-center h-9 font-bold text-sm text-[#0f172a] capitalize px-10',
+          caption_label: 'text-sm font-bold text-[#0f172a] capitalize',
+          nav: 'absolute top-0 inset-x-0 h-9 flex items-center justify-between px-1 z-10 pointer-events-none',
           button_previous: cn(
             defaultClassNames.button_previous,
-            'h-8 w-8 rounded-lg border border-[#ebdcca] hover:bg-[#f5efe6] text-[#766a5e] hover:text-[#2d251e] transition-colors flex items-center justify-center'
+            'h-7 w-7 rounded-lg border border-slate-200 hover:bg-slate-100 text-slate-700 hover:text-slate-900 transition-colors flex items-center justify-center pointer-events-auto cursor-pointer'
           ),
           button_next: cn(
             defaultClassNames.button_next,
-            'h-8 w-8 rounded-lg border border-[#ebdcca] hover:bg-[#f5efe6] text-[#766a5e] hover:text-[#2d251e] transition-colors flex items-center justify-center'
+            'h-7 w-7 rounded-lg border border-slate-200 hover:bg-slate-100 text-slate-700 hover:text-slate-900 transition-colors flex items-center justify-center pointer-events-auto cursor-pointer'
           ),
-          weekday: 'text-[11px] font-semibold text-[#766a5e] uppercase tracking-wider py-1.5',
+          weekdays: 'grid grid-cols-7 text-center mb-1',
+          weekday: 'text-[11px] font-semibold text-slate-500 uppercase tracking-wider py-1',
+          weeks: 'space-y-1',
+          week: 'grid grid-cols-7 gap-1',
+          day: 'flex items-center justify-center',
           day_button: cn(
             defaultClassNames.day_button,
-            'text-xs font-semibold hover:bg-[#f5efe6] transition-all cursor-pointer'
+            'text-xs font-semibold hover:bg-slate-100 transition-all cursor-pointer rounded-xl h-8 w-8 flex items-center justify-center'
           ),
           selected: cn(
             defaultClassNames.selected,
-            'bg-[#977f5a] text-white font-bold rounded-xl shadow-xs'
+            'bg-[#0369a1] text-white font-bold rounded-xl shadow-xs hover:bg-[#0284c7]'
           ),
-          today: 'font-bold text-[#977f5a] underline decoration-[#977f5a] decoration-2 underline-offset-4',
-          outside: 'text-neutral-300 opacity-60',
-          disabled: 'text-neutral-300 opacity-40 cursor-not-allowed',
+          today: 'font-bold text-[#0369a1] underline decoration-[#0369a1] decoration-2 underline-offset-4',
+          outside: 'text-slate-300 opacity-50',
+          disabled: 'text-slate-300 opacity-40 cursor-not-allowed',
           ...classNames,
         }}
         {...props}

@@ -536,10 +536,10 @@ export default function ItaunaReservasPage() {
                           {reserva.num_diarias} x {formatCurrency(Number(reserva.valor_diaria))}
                         </span>
                       </div>
-                      <div className="flex justify-between">
-                        <span>Taxa de Faxina:</span>
-                        <span className="font-medium text-[#0f172a]">
-                          {formatCurrency(Number(reserva.taxa_limpeza || 180))}
+                      <div className="flex justify-between text-slate-500">
+                        <span>(-) Despesa Faxina:</span>
+                        <span className="font-medium text-slate-700">
+                          - {formatCurrency(Number(reserva.taxa_limpeza || 180))}
                         </span>
                       </div>
                       {Number(reserva.taxa_plataforma) > 0 && (
@@ -705,6 +705,7 @@ export default function ItaunaReservasPage() {
                 value={checkin}
                 onChange={setCheckin}
                 placeholder="Data entrada..."
+                align="left"
               />
             </div>
             <div className="space-y-1">
@@ -713,6 +714,7 @@ export default function ItaunaReservasPage() {
                 value={checkout}
                 onChange={setCheckout}
                 placeholder="Data saída..."
+                align="right"
               />
             </div>
             <div className="space-y-1 col-span-2 sm:col-span-1">
@@ -862,19 +864,13 @@ export default function ItaunaReservasPage() {
           {/* Resumo Financeiro em Tempo Real */}
           <div className="p-3.5 rounded-2xl bg-[#f0f9ff] border border-[#bae6fd] space-y-1.5 text-xs">
             <div className="flex justify-between text-[#64748b]">
-              <span>Diárias ({previewCalc.num_diarias}x):</span>
+              <span>Diárias ({previewCalc.num_diarias} noites):</span>
               <span className="font-semibold text-[#0f172a]">
-                {formatCurrency(previewCalc.subtotal_diarias)}
-              </span>
-            </div>
-            <div className="flex justify-between text-[#64748b]">
-              <span>Taxa de Faxina:</span>
-              <span className="font-semibold text-[#0f172a]">
-                + {formatCurrency(previewCalc.taxa_limpeza)}
+                {previewCalc.num_diarias} x {formatCurrency(valorDiaria)}
               </span>
             </div>
             <div className="pt-1 border-t border-[#bae6fd]/60 flex justify-between font-bold text-[#0f172a]">
-              <span>Total Cobrado da Reserva:</span>
+              <span>Total da Reserva:</span>
               <span className="text-[#0369a1] font-extrabold text-sm">
                 {formatCurrency(previewCalc.valor_total)}
               </span>
@@ -887,14 +883,21 @@ export default function ItaunaReservasPage() {
               </div>
             )}
 
-            <div className="flex justify-between text-slate-500">
+            <div className="flex justify-between text-slate-600">
               <span>(-) Despesa de Faxina:</span>
               <span className="font-medium">- {formatCurrency(previewCalc.taxa_limpeza)}</span>
             </div>
 
+            <div className="flex justify-between text-[#64748b] text-[11px] pt-0.5 border-t border-dashed border-[#bae6fd]">
+              <span>Saldo pós Plataforma e Faxina:</span>
+              <span className="font-bold text-[#0f172a]">
+                {formatCurrency(previewCalc.saldo_apos_plataforma_e_faxina)}
+              </span>
+            </div>
+
             {temComissaoDani && (
               <div className="flex justify-between text-amber-800">
-                <span>(-) Comissão Dani ({taxaDaniPercentual}% restante):</span>
+                <span>(-) Comissão Dani ({taxaDaniPercentual}% sobre saldo):</span>
                 <span className="font-semibold">
                   - {formatCurrency(previewCalc.valor_comissao_dani)}
                 </span>

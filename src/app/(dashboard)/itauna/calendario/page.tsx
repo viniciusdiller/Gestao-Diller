@@ -61,6 +61,11 @@ export default function ItaunaCalendarioPage() {
   const [reservas, setReservas] = React.useState<ReservaItem[]>([]);
   const [selectedReserva, setSelectedReserva] = React.useState<ReservaItem | null>(null);
   const [selectedFreeDate, setSelectedFreeDate] = React.useState<string | null>(null);
+  const [selectedTurnaround, setSelectedTurnaround] = React.useState<{
+    date: string;
+    checkoutReserva: ReservaItem;
+    checkinReserva: ReservaItem;
+  } | null>(null);
 
   const year = currentDate.getFullYear();
   const month = currentDate.getMonth(); // 0 a 11
@@ -126,6 +131,7 @@ export default function ItaunaCalendarioPage() {
         isOccupied: boolean;
         isCheckin: boolean;
         isCheckout: boolean;
+        isTurnaround: boolean;
         activeReserva?: ReservaItem;
         checkinReserva?: ReservaItem;
         checkoutReserva?: ReservaItem;
@@ -148,10 +154,14 @@ export default function ItaunaCalendarioPage() {
         (r) => r.status !== 'cancelada' && r.data_checkout === dayStr
       );
 
+      // Troca de Hóspede (Turnaround): saída de um hóspede e entrada de outro no mesmo dia
+      const isTurnaround = Boolean(checkinReserva && checkoutReserva);
+
       map.set(dayStr, {
         isOccupied: Boolean(activeReserva),
         isCheckin: Boolean(checkinReserva),
         isCheckout: Boolean(checkoutReserva),
+        isTurnaround,
         activeReserva,
         checkinReserva,
         checkoutReserva,
@@ -245,7 +255,7 @@ export default function ItaunaCalendarioPage() {
           <span className="w-2.5 h-2.5 rounded-full bg-[#10b981]" />
         </div>
 
-        <div className="col-span-2 p-3 rounded-2xl bg-white border border-[#e2e8f0] shadow-2xs flex items-center justify-around text-xs font-medium text-[#475569]">
+        <div className="col-span-2 p-3 rounded-2xl bg-white border border-[#e2e8f0] shadow-2xs flex flex-wrap items-center justify-around gap-2 text-xs font-medium text-[#475569]">
           <span className="flex items-center gap-1.5">
             <span className="w-2.5 h-2.5 rounded-full bg-[#10b981]" />
             Livre
@@ -257,6 +267,10 @@ export default function ItaunaCalendarioPage() {
           <span className="flex items-center gap-1.5">
             <span className="w-2.5 h-2.5 rounded-full bg-[#38bdf8]" />
             Check-in / Saída
+          </span>
+          <span className="flex items-center gap-1.5">
+            <span className="w-2.5 h-2.5 rounded-full bg-[#0369a1]" />
+            Troca no Dia
           </span>
         </div>
       </div>
@@ -298,8 +312,9 @@ export default function ItaunaCalendarioPage() {
                 const isOccupied = Boolean(info?.isOccupied);
                 const isCheckin = Boolean(info?.isCheckin);
                 const isCheckout = Boolean(info?.isCheckout);
+                const isTurnaround = Boolean(info?.isTurnaround);
 
-                // A reserva prioritária ao clicar:
+                // A reserva prioritária ao clicar (ou troca de hóspedes)
                 const targetReserva =
                   info?.activeReserva || info?.checkinReserva || info?.checkoutReserva;
 
@@ -307,7 +322,13 @@ export default function ItaunaCalendarioPage() {
                   <div
                     key={dayStr}
                     onClick={() => {
-                      if (targetReserva) {
+                      if (isTurnaround && info?.checkoutReserva && info?.checkinReserva) {
+                        setSelectedTurnaround({
+                          date: dayStr,
+                          checkoutReserva: info.checkoutReserva,
+                          checkinReserva: info.checkinReserva,
+                        });
+                      } else if (targetReserva) {
                         setSelectedReserva(targetReserva);
                       } else {
                         setSelectedFreeDate(dayStr);
@@ -318,7 +339,9 @@ export default function ItaunaCalendarioPage() {
                     className={`h-16 sm:h-20 p-1.5 sm:p-2 rounded-xl sm:rounded-2xl border transition-all duration-150 flex flex-col justify-between cursor-pointer select-none relative ${
                       isToday ? 'ring-2 ring-[#0369a1] ring-offset-1 z-10' : ''
                     } ${
-                      isOccupied
+                      isTurnaround
+                        ? 'bg-gradient-to-br from-sky-50 via-white to-emerald-50 border-[#38bdf8] text-[#0f172a] hover:border-[#0284c7] shadow-xs'
+                        : isOccupied
                         ? 'bg-amber-50/70 border-amber-200/90 text-amber-950 hover:bg-amber-100/80 active:scale-95 shadow-2xs'
                         : isCheckout
                         ? 'bg-sky-50/50 border-sky-200/80 text-sky-950 hover:bg-sky-100/60 active:scale-95'
@@ -327,11 +350,13 @@ export default function ItaunaCalendarioPage() {
                         : 'bg-white border-[#e2e8f0] text-[#1e293b] hover:bg-[#f8fafc] hover:border-[#38bdf8]/40 active:scale-95'
                     }`}
                   >
-                    {/* Linha Superior: Dia e Chips de Entrada/Saída */}
+                    {/* Linha Superior: Dia e Chips de Entrada/Saída/Troca */}
                     <div className="flex items-center justify-between">
                       <span
                         className={`text-xs sm:text-sm font-bold ${
                           isToday
+                            ? 'text-[#0369a1]'
+                            : isTurnaround
                             ? 'text-[#0369a1]'
                             : isOccupied
                             ? 'text-amber-950'
@@ -342,21 +367,38 @@ export default function ItaunaCalendarioPage() {
                       </span>
 
                       <div className="flex items-center gap-0.5">
-                        {isCheckin && (
-                          <span className="text-[8px] sm:text-[9px] font-bold uppercase px-1 py-0.2 rounded bg-emerald-100 text-emerald-800">
-                            Entrada
+                        {isTurnaround ? (
+                          <span className="text-[8px] sm:text-[9px] font-black uppercase px-1.5 py-0.2 rounded-md bg-[#0369a1] text-white">
+                            Troca
                           </span>
-                        )}
-                        {isCheckout && !isOccupied && (
-                          <span className="text-[8px] sm:text-[9px] font-bold uppercase px-1 py-0.2 rounded bg-sky-100 text-sky-800">
-                            Saída
-                          </span>
+                        ) : (
+                          <>
+                            {isCheckin && (
+                              <span className="text-[8px] sm:text-[9px] font-bold uppercase px-1 py-0.2 rounded bg-emerald-100 text-emerald-800">
+                                Entrada
+                              </span>
+                            )}
+                            {isCheckout && !isOccupied && (
+                              <span className="text-[8px] sm:text-[9px] font-bold uppercase px-1 py-0.2 rounded bg-sky-100 text-sky-800">
+                                Saída
+                              </span>
+                            )}
+                          </>
                         )}
                       </div>
                     </div>
 
                     {/* Conteúdo Inferior: Nome do Hóspede ou Indicador Livre */}
-                    {isOccupied && info?.activeReserva ? (
+                    {isTurnaround && info?.checkoutReserva && info?.checkinReserva ? (
+                      <div className="min-w-0 space-y-0.5">
+                        <p className="text-[8px] sm:text-[9px] font-semibold text-sky-800 truncate leading-none">
+                          ↑ Saída: {info.checkoutReserva.aluguel_hospedes?.nome?.split(' ')[0]}
+                        </p>
+                        <p className="text-[8px] sm:text-[9px] font-semibold text-emerald-800 truncate leading-none">
+                          ↓ Entr.: {info.checkinReserva.aluguel_hospedes?.nome?.split(' ')[0]}
+                        </p>
+                      </div>
+                    ) : isOccupied && info?.activeReserva ? (
                       <div className="min-w-0">
                         <p className="text-[10px] sm:text-xs font-semibold truncate text-amber-900 leading-tight">
                           {info.activeReserva.aluguel_hospedes?.nome?.split(' ')[0] || 'Alugado'}
@@ -449,23 +491,16 @@ export default function ItaunaCalendarioPage() {
             <div className="p-3.5 rounded-2xl bg-white border border-[#e2e8f0] space-y-2 text-xs">
               <div className="flex justify-between">
                 <span className="text-[#64748b]">
-                  {selectedReserva.num_diarias} noites x {formatCurrency(Number(selectedReserva.valor_diaria))}
+                  Diárias ({selectedReserva.num_diarias} noites):
                 </span>
                 <span className="font-semibold text-[#0f172a]">
-                  {formatCurrency(selectedReserva.num_diarias * Number(selectedReserva.valor_diaria))}
-                </span>
-              </div>
-
-              <div className="flex justify-between">
-                <span className="text-[#64748b]">Taxa de Limpeza / Faxina</span>
-                <span className="font-semibold text-[#0f172a]">
-                  + {formatCurrency(Number(selectedReserva.taxa_limpeza || 180))}
+                  {selectedReserva.num_diarias} x {formatCurrency(Number(selectedReserva.valor_diaria))}
                 </span>
               </div>
 
               <div className="pt-1.5 border-t border-[#f1f5f9] flex justify-between font-bold text-[#0f172a]">
-                <span>Total Cobrado da Reserva</span>
-                <span>{formatCurrency(Number(selectedReserva.valor_total))}</span>
+                <span>Total da Reserva</span>
+                <span className="text-[#0369a1] font-extrabold">{formatCurrency(Number(selectedReserva.valor_total))}</span>
               </div>
 
               {Number(selectedReserva.taxa_plataforma) > 0 && (
@@ -488,7 +523,7 @@ export default function ItaunaCalendarioPage() {
 
               {selectedReserva.tem_comissao_dani && (
                 <div className="flex justify-between text-amber-700">
-                  <span>(-) Comissão da Dani (20% restante)</span>
+                  <span>(-) Comissão da Dani (20% sobre saldo)</span>
                   <span className="font-semibold">
                     - {formatCurrency(Number(selectedReserva.valor_comissao_dani || 0))}
                   </span>
@@ -520,6 +555,126 @@ export default function ItaunaCalendarioPage() {
                   Gerenciar Reserva Completa
                 </Button>
               </Link>
+            </div>
+          </div>
+        )}
+      </Modal>
+
+      {/* Modal para Troca de Hóspedes no Mesmo Dia (Turnaround) */}
+      <Modal
+        isOpen={Boolean(selectedTurnaround)}
+        onClose={() => setSelectedTurnaround(null)}
+        title="Troca de Hóspedes no Dia"
+        description={
+          selectedTurnaround
+            ? `Ocorrências de ${formatDateBR(selectedTurnaround.date)} (Saída pela manhã e Entrada à tarde)`
+            : ''
+        }
+      >
+        {selectedTurnaround && (
+          <div className="space-y-4 pt-1">
+            {/* Alerta de Faxina de Troca */}
+            <div className="p-3.5 rounded-2xl bg-amber-50 border border-amber-200 text-xs text-amber-950 flex items-start gap-2.5">
+              <Clock className="w-5 h-5 text-amber-700 shrink-0 mt-0.5" />
+              <div>
+                <p className="font-bold text-amber-900">Janela de Faxina de Troca: 11h às 14h</p>
+                <p className="text-[11px] text-amber-800 mt-0.5">
+                  Saída do hóspede anterior pela manhã e check-in do novo hóspede à tarde.
+                  Taxa de Faxina fixa: <strong>R$ 180,00</strong>.
+                </p>
+              </div>
+            </div>
+
+            {/* Card 1: Check-out (Saída) */}
+            <div className="p-3.5 rounded-2xl bg-white border border-[#38bdf8] shadow-2xs space-y-2">
+              <div className="flex items-center justify-between pb-1.5 border-b border-slate-100">
+                <span className="text-[10px] font-extrabold uppercase tracking-wider text-sky-800 bg-sky-50 px-2 py-0.5 rounded-md border border-sky-200">
+                  Saída (Check-out até 11h)
+                </span>
+                <span className="text-xs font-bold text-[#0369a1]">
+                  {formatCurrency(Number(selectedTurnaround.checkoutReserva.valor_total))}
+                </span>
+              </div>
+              <div className="flex items-center justify-between">
+                <div>
+                  <h4 className="text-sm font-bold text-[#0f172a]">
+                    {selectedTurnaround.checkoutReserva.aluguel_hospedes?.nome}
+                  </h4>
+                  <p className="text-[11px] text-[#64748b]">
+                    {selectedTurnaround.checkoutReserva.num_diarias} noites • Canal:{' '}
+                    <strong className="uppercase">{selectedTurnaround.checkoutReserva.origem}</strong>
+                  </p>
+                </div>
+                {sanitizePhoneForWhatsApp(selectedTurnaround.checkoutReserva.aluguel_hospedes?.telefone || '') && (
+                  <a
+                    href={`https://wa.me/${sanitizePhoneForWhatsApp(selectedTurnaround.checkoutReserva.aluguel_hospedes?.telefone || '')}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="p-2 rounded-xl bg-[#25D366] text-white hover:bg-[#1fa851] transition-colors shadow-2xs"
+                    title="Falar no WhatsApp"
+                  >
+                    <MessageCircle className="w-4 h-4" />
+                  </a>
+                )}
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  const r = selectedTurnaround.checkoutReserva;
+                  setSelectedTurnaround(null);
+                  setSelectedReserva(r);
+                }}
+                className="w-full text-xs font-semibold h-8 mt-1 border-slate-200 text-[#0369a1] hover:bg-sky-50"
+              >
+                Ver Detalhes Financeiros da Saída
+              </Button>
+            </div>
+
+            {/* Card 2: Check-in (Entrada) */}
+            <div className="p-3.5 rounded-2xl bg-white border border-emerald-300 shadow-2xs space-y-2">
+              <div className="flex items-center justify-between pb-1.5 border-b border-slate-100">
+                <span className="text-[10px] font-extrabold uppercase tracking-wider text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">
+                  Entrada (Check-in a partir de 14h)
+                </span>
+                <span className="text-xs font-bold text-emerald-800">
+                  {formatCurrency(Number(selectedTurnaround.checkinReserva.valor_total))}
+                </span>
+              </div>
+              <div className="flex items-center justify-between">
+                <div>
+                  <h4 className="text-sm font-bold text-[#0f172a]">
+                    {selectedTurnaround.checkinReserva.aluguel_hospedes?.nome}
+                  </h4>
+                  <p className="text-[11px] text-[#64748b]">
+                    {selectedTurnaround.checkinReserva.num_diarias} noites • {selectedTurnaround.checkinReserva.num_hospedes || 1} hóspede(s) • Canal:{' '}
+                    <strong className="uppercase">{selectedTurnaround.checkinReserva.origem}</strong>
+                  </p>
+                </div>
+                {sanitizePhoneForWhatsApp(selectedTurnaround.checkinReserva.aluguel_hospedes?.telefone || '') && (
+                  <a
+                    href={`https://wa.me/${sanitizePhoneForWhatsApp(selectedTurnaround.checkinReserva.aluguel_hospedes?.telefone || '')}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="p-2 rounded-xl bg-[#25D366] text-white hover:bg-[#1fa851] transition-colors shadow-2xs"
+                    title="Falar no WhatsApp"
+                  >
+                    <MessageCircle className="w-4 h-4" />
+                  </a>
+                )}
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  const r = selectedTurnaround.checkinReserva;
+                  setSelectedTurnaround(null);
+                  setSelectedReserva(r);
+                }}
+                className="w-full text-xs font-semibold h-8 mt-1 border-slate-200 text-emerald-800 hover:bg-emerald-50"
+              >
+                Ver Detalhes Financeiros da Entrada
+              </Button>
             </div>
           </div>
         )}
