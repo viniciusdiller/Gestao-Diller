@@ -20,11 +20,11 @@ export function Pagination({
   totalPages,
   onPageChange,
   totalItems,
-  pageSize,
+  pageSize = 6,
   itemName = 'itens',
   className,
 }: PaginationProps) {
-  if (totalPages <= 1 && (!totalItems || totalItems <= (pageSize || 10))) {
+  if (totalPages <= 1 && (!totalItems || totalItems <= pageSize)) {
     return null;
   }
 
@@ -66,11 +66,11 @@ export function Pagination({
           <span>
             Mostrando{' '}
             <strong className="font-semibold text-[#2d251e]">
-              {Math.min((currentPage - 1) * (pageSize || 10) + 1, totalItems)}
+              {Math.min((currentPage - 1) * (pageSize || 6) + 1, totalItems)}
             </strong>{' '}
             a{' '}
             <strong className="font-semibold text-[#2d251e]">
-              {Math.min(currentPage * (pageSize || 10), totalItems)}
+              {Math.min(currentPage * (pageSize || 6), totalItems)}
             </strong>{' '}
             de <strong className="font-semibold text-[#2d251e]">{totalItems}</strong> {itemName}
           </span>

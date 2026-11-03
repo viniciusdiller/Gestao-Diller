@@ -27,6 +27,7 @@ import { Input, Textarea } from '@/components/ui/input';
 import { CurrencyInput } from '@/components/ui/currency-input';
 import { DatePicker } from '@/components/ui/date-picker';
 import { Pagination } from '@/components/ui/pagination';
+import { LoadingState } from '@/components/ui/loading-state';
 import { useToast } from '@/components/ui/toast';
 import { formatCurrency, formatDateBR } from '@/lib/utils';
 import { getWhatsAppBillingUrl } from '@/lib/services/whatsapp';
@@ -41,8 +42,16 @@ export default function CobrancasPage() {
   const [loading, setLoading] = React.useState(true);
   const [activeTab, setActiveTab] = React.useState<TabType>('overdue');
   const [currentPage, setCurrentPage] = React.useState(1);
+  const [pageSize, setPageSize] = React.useState(6);
 
-  const PAGE_SIZE = 12;
+  React.useEffect(() => {
+    const handleResize = () => {
+      setPageSize(window.innerWidth >= 768 ? 12 : 6);
+    };
+    handleResize();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   React.useEffect(() => {
     setCurrentPage(1);
@@ -131,10 +140,10 @@ export default function CobrancasPage() {
   else if (activeTab === 'paid') currentList = paidList;
   else if (activeTab === 'all') currentList = installments;
 
-  const totalPages = Math.ceil(currentList.length / PAGE_SIZE) || 1;
+  const totalPages = Math.ceil(currentList.length / pageSize) || 1;
   const paginatedInstallments = currentList.slice(
-    (currentPage - 1) * PAGE_SIZE,
-    currentPage * PAGE_SIZE
+    (currentPage - 1) * pageSize,
+    currentPage * pageSize
   );
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -197,7 +206,7 @@ export default function CobrancasPage() {
 
     if (res.success) {
       setInstallmentToEdit(null);
-      showToast('Parcela atualizada com sucesso! ✨');
+      showToast('Parcela atualizada com sucesso.');
       loadData();
     } else {
       setEditError(res.error || 'Erro ao atualizar parcela.');
@@ -308,9 +317,7 @@ export default function CobrancasPage() {
 
       {/* Lista de Parcelas em Cards (Mobile-first) */}
       {loading ? (
-        <div className="py-12 text-center text-xs text-[#766a5e]">
-          Carregando cobranças...
-        </div>
+        <LoadingState message="Carregando cobranças..." />
       ) : currentList.length === 0 ? (
         <div className="py-12 text-center space-y-2">
           <div className="w-12 h-12 mx-auto rounded-full bg-[#15803d]/10 flex items-center justify-center text-[#15803d]">
@@ -494,7 +501,7 @@ export default function CobrancasPage() {
           currentPage={currentPage}
           totalPages={totalPages}
           totalItems={currentList.length}
-          pageSize={PAGE_SIZE}
+          pageSize={pageSize}
           itemName="parcelas"
           onPageChange={(page) => setCurrentPage(page)}
         />

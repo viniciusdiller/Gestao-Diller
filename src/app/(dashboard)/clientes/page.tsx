@@ -10,7 +10,6 @@ import {
   ShoppingBag,
   Clock,
   ChevronRight,
-  Sparkles,
   Pencil,
   Trash2,
   AlertTriangle,
@@ -29,6 +28,7 @@ import { PhoneInput } from '@/components/ui/phone-input';
 import { Modal } from '@/components/ui/modal';
 import { Badge } from '@/components/ui/badge';
 import { Pagination } from '@/components/ui/pagination';
+import { LoadingState } from '@/components/ui/loading-state';
 import { useToast } from '@/components/ui/toast';
 import { formatCurrency, formatDateBR } from '@/lib/utils';
 import { sanitizePhoneForWhatsApp } from '@/lib/services/whatsapp';
@@ -39,9 +39,17 @@ export default function ClientesPage() {
   const [clients, setClients] = React.useState<any[]>([]);
   const [search, setSearch] = React.useState('');
   const [currentPage, setCurrentPage] = React.useState(1);
+  const [pageSize, setPageSize] = React.useState(6);
   const [loading, setLoading] = React.useState(true);
 
-  const PAGE_SIZE = 12;
+  React.useEffect(() => {
+    const handleResize = () => {
+      setPageSize(window.innerWidth >= 768 ? 12 : 6);
+    };
+    handleResize();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   React.useEffect(() => {
     setCurrentPage(1);
@@ -145,7 +153,7 @@ export default function ClientesPage() {
       setNewName('');
       setNewPhone('');
       setNewNotes('');
-      showToast('Cliente cadastrada com sucesso! ✨');
+      showToast('Cliente cadastrada com sucesso.');
       loadClients();
     } else {
       setFormError(res.error || 'Erro ao cadastrar cliente.');
@@ -179,7 +187,7 @@ export default function ClientesPage() {
 
     if (res.success) {
       setClientToEdit(null);
-      showToast('Cliente atualizada com sucesso! ✨');
+      showToast('Cliente atualizada com sucesso.');
       loadClients();
       if (selectedClientId === clientToEdit.id) {
         handleOpenDetails(clientToEdit.id);
@@ -219,10 +227,10 @@ export default function ClientesPage() {
     );
   });
 
-  const totalPages = Math.ceil(filteredClients.length / PAGE_SIZE) || 1;
+  const totalPages = Math.ceil(filteredClients.length / pageSize) || 1;
   const paginatedClients = filteredClients.slice(
-    (currentPage - 1) * PAGE_SIZE,
-    currentPage * PAGE_SIZE
+    (currentPage - 1) * pageSize,
+    currentPage * pageSize
   );
 
   return (
@@ -260,9 +268,7 @@ export default function ClientesPage() {
 
       {/* Lista de Cards de Clientes (Zero Tabelas) */}
       {loading ? (
-        <div className="py-12 text-center text-xs text-[#766a5e]">
-          Carregando clientes...
-        </div>
+        <LoadingState message="Carregando clientes..." />
       ) : filteredClients.length === 0 ? (
         <div className="py-12 text-center space-y-3">
           <div className="w-12 h-12 mx-auto rounded-full bg-[#977f5a]/10 flex items-center justify-center text-[#977f5a]">
@@ -334,7 +340,7 @@ export default function ClientesPage() {
             currentPage={currentPage}
             totalPages={totalPages}
             totalItems={filteredClients.length}
-            pageSize={PAGE_SIZE}
+            pageSize={pageSize}
             itemName="clientes"
             onPageChange={(page) => setCurrentPage(page)}
           />
@@ -417,9 +423,7 @@ export default function ClientesPage() {
         description={clientDetails?.client?.phone || 'Sem WhatsApp cadastrado'}
       >
         {detailsLoading ? (
-          <div className="py-8 text-center text-xs text-[#766a5e]">
-            Carregando histórico...
-          </div>
+          <LoadingState message="Carregando perfil e histórico..." />
         ) : clientDetails ? (
           <div className="space-y-4">
             {/* Ações de Gestão do Perfil: Editar e Excluir */}
@@ -511,8 +515,8 @@ export default function ClientesPage() {
 
             {/* Histórico de Compras */}
             <div className="space-y-2 pt-1">
-              <h4 className="text-xs font-bold text-[#2d251e] uppercase tracking-wider flex items-center gap-1">
-                <Sparkles className="w-3.5 h-3.5 text-[#977f5a]" /> Histórico de Compras
+              <h4 className="text-xs font-bold text-[#2d251e] uppercase tracking-wider flex items-center gap-1.5">
+                <ShoppingBag className="w-3.5 h-3.5 text-[#977f5a]" /> Histórico de Compras
               </h4>
 
               {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}

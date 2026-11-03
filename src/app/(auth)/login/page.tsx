@@ -7,7 +7,7 @@ import { Button } from '@/lib/../components/ui/button';
 import { Input } from '@/lib/../components/ui/input';
 import { Card, CardContent } from '@/lib/../components/ui/card';
 import { createClient } from '@/lib/supabase/client';
-import { Sparkles, Lock, Mail } from 'lucide-react';
+import { Lock, Mail } from 'lucide-react';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -79,8 +79,8 @@ export default function LoginPage() {
             <h1 className="text-2xl font-bold tracking-tight text-[#2d251e]">
               Renata Diller
             </h1>
-            <p className="text-xs font-semibold tracking-widest text-[#977f5a] uppercase flex items-center justify-center gap-1 mt-0.5">
-              <Sparkles className="w-3.5 h-3.5 inline" /> Gestão Financeira
+            <p className="text-xs font-semibold tracking-widest text-[#977f5a] uppercase mt-0.5">
+              Gestão Financeira
             </p>
           </div>
         </div>

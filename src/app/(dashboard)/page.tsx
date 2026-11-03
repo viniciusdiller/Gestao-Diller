@@ -8,7 +8,6 @@ import {
   Award,
   MessageCircle,
   ArrowRight,
-  PlusCircle,
   Gem,
 } from 'lucide-react';
 import { getDashboardDataAction } from '../actions/dashboard';
@@ -85,22 +84,14 @@ async function DashboardContent() {
 
   return (
     <div className="space-y-6 animate-in fade-in duration-300">
-      {/* Saudação e Ação Rápida */}
-      <div className="flex items-center justify-between pt-1">
-        <div>
-          <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-[#2d251e]">
-            Visão Geral
-          </h2>
-          <p className="text-xs sm:text-sm text-[#766a5e]">
-            Resumo financeiro e operacional de Renata Diller Semijoias
-          </p>
-        </div>
-        <Link
-          href="/vendas"
-          className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-[#977f5a] hover:bg-[#836d4b] text-white text-xs sm:text-sm font-semibold shadow-xs active:scale-95 transition-all cursor-pointer"
-        >
-          <PlusCircle className="w-4 h-4" /> Nova Venda
-        </Link>
+      {/* Saudação */}
+      <div className="pt-1">
+        <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-[#2d251e]">
+          Visão Geral
+        </h2>
+        <p className="text-xs sm:text-sm text-[#766a5e]">
+          Resumo financeiro e operacional de Renata Diller Semijoias
+        </p>
       </div>
 
       {/* Grid de KPIs (2 cols no mobile, 4 cols no desktop) */}

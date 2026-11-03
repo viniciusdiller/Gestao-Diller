@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { CheckCircle2, AlertCircle, X, Sparkles } from 'lucide-react';
+import { CheckCircle2, AlertCircle, X, Info } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface ToastContextType {
@@ -46,7 +46,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
               </div>
             ) : (
               <div className="p-1 rounded-full bg-[#977f5a]/30 text-[#e6decb] shrink-0">
-                <Sparkles className="w-4 h-4" />
+                <Info className="w-4 h-4" />
               </div>
             )}
             <p className="text-xs font-medium text-white truncate leading-snug">

@@ -5,7 +5,6 @@ import {
   ShoppingBag,
   PlusCircle,
   Calendar,
-  Sparkles,
   Search,
   MessageCircle,
   UserPlus,
@@ -30,6 +29,7 @@ import { Badge } from '@/components/ui/badge';
 import { Combobox } from '@/components/ui/combobox';
 import { DatePicker } from '@/components/ui/date-picker';
 import { Pagination } from '@/components/ui/pagination';
+import { LoadingState } from '@/components/ui/loading-state';
 import { useToast } from '@/components/ui/toast';
 import { formatCurrency, formatDateBR } from '@/lib/utils';
 import { generateInstallments, InstallmentItem } from '@/lib/services/installment-calculator';
@@ -49,8 +49,16 @@ export default function VendasPage() {
   const [search, setSearch] = React.useState('');
   const [filterMethod, setFilterMethod] = React.useState<string>('all');
   const [currentPage, setCurrentPage] = React.useState(1);
+  const [pageSize, setPageSize] = React.useState(6);
 
-  const PAGE_SIZE = 12;
+  React.useEffect(() => {
+    const handleResize = () => {
+      setPageSize(window.innerWidth >= 768 ? 12 : 6);
+    };
+    handleResize();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   React.useEffect(() => {
     setCurrentPage(1);
@@ -186,7 +194,7 @@ export default function VendasPage() {
       setShowQuickClient(false);
       setQuickName('');
       setQuickPhone('');
-      showToast('Cliente cadastrada com sucesso! ✨');
+      showToast('Cliente cadastrada com sucesso.');
     } else {
       setQuickClientError(res.error || 'Erro ao cadastrar cliente.');
     }
@@ -268,7 +276,7 @@ export default function VendasPage() {
 
     if (res.success) {
       setSaleToEdit(null);
-      showToast('Venda atualizada com sucesso! ✨');
+      showToast('Venda atualizada com sucesso.');
       loadData();
     } else {
       setEditError(res.error || 'Erro ao atualizar venda.');
@@ -316,10 +324,10 @@ export default function VendasPage() {
     return sale.payment_method === filterMethod;
   });
 
-  const totalPages = Math.ceil(filteredSales.length / PAGE_SIZE) || 1;
+  const totalPages = Math.ceil(filteredSales.length / pageSize) || 1;
   const paginatedSales = filteredSales.slice(
-    (currentPage - 1) * PAGE_SIZE,
-    currentPage * PAGE_SIZE
+    (currentPage - 1) * pageSize,
+    currentPage * pageSize
   );
 
   return (
@@ -381,9 +389,7 @@ export default function VendasPage() {
 
       {/* Lista de Cards de Vendas */}
       {loading ? (
-        <div className="py-12 text-center text-xs text-[#766a5e]">
-          Carregando vendas...
-        </div>
+        <LoadingState message="Carregando vendas..." />
       ) : filteredSales.length === 0 ? (
         <div className="py-12 text-center space-y-3">
           <div className="w-12 h-12 mx-auto rounded-full bg-[#977f5a]/10 flex items-center justify-center text-[#977f5a]">
@@ -505,7 +511,7 @@ export default function VendasPage() {
             currentPage={currentPage}
             totalPages={totalPages}
             totalItems={filteredSales.length}
-            pageSize={PAGE_SIZE}
+            pageSize={pageSize}
             itemName="vendas"
             onPageChange={(page) => setCurrentPage(page)}
           />
@@ -547,8 +553,8 @@ export default function VendasPage() {
 
             {showQuickClient ? (
               <div className="p-3 rounded-xl bg-[#faf6f0] border border-[#ebdcca] space-y-2.5">
-                <p className="text-[11px] font-bold text-[#977f5a] flex items-center gap-1">
-                  <Sparkles className="w-3 h-3" /> Cadastro Rápido de Cliente
+                <p className="text-[11px] font-bold text-[#977f5a] flex items-center gap-1.5">
+                  <UserPlus className="w-3.5 h-3.5" /> Cadastro Rápido de Cliente
                 </p>
 
                 {quickClientError && (
@@ -656,7 +662,7 @@ export default function VendasPage() {
           {paymentMethod === 'fiado' && (
             <div className="p-3.5 rounded-2xl bg-[#f5efe6] border border-[#e4dcd0] space-y-3">
               <h4 className="text-xs font-bold text-[#2d251e] flex items-center gap-1.5 uppercase tracking-wider">
-                <Sparkles className="w-3.5 h-3.5 text-[#977f5a]" /> Detalhes do Parcelamento
+                <Calendar className="w-3.5 h-3.5 text-[#977f5a]" /> Detalhes do Parcelamento
               </h4>
 
               <div className="grid grid-cols-2 gap-2.5">

@@ -5,7 +5,6 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import {
   LogOut,
-  Sparkles,
   LayoutDashboard,
   ShoppingBag,
   Users,
@@ -67,9 +66,6 @@ export function Header() {
                 className="w-full h-full object-cover rounded-full"
                 priority
               />
-            </div>
-            <div className="absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full bg-[#977f5a] flex items-center justify-center text-white shadow-xs">
-              <Sparkles className="w-2.5 h-2.5" />
             </div>
           </div>
 
