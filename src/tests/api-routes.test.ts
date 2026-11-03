@@ -5,14 +5,14 @@ describe('API Route contracts and manifests', () => {
     const manifestModule = await import('@/app/manifest');
     const manifest = manifestModule.default();
 
-    expect(manifest.name).toBe('Renata Diller — Semijoias');
-    expect(manifest.short_name).toBe('Renata Semijoias');
+    expect(manifest.name).toBe('Diller-Hub — Gestão Integrada');
+    expect(manifest.short_name).toBe('Diller-Hub');
     expect(manifest.display).toBe('standalone');
-    expect(manifest.theme_color).toBe('#977f5a');
-    expect(manifest.background_color).toBe('#f0e9df');
+    expect(manifest.theme_color).toBe('#0f172a');
+    expect(manifest.background_color).toBe('#f8fafc');
     expect(manifest.icons).toHaveLength(2);
-    expect(manifest.icons?.[0].src).toBe('/logo.jpg');
-    expect(manifest.icons?.[1].src).toBe('/apple-touch-icon.png');
+    expect(manifest.icons?.[0].src).toBe('/diller.jpg');
+    expect(manifest.icons?.[1].src).toBe('/diller.jpg');
   });
 
   it('validates query params parsing logic for API routes', () => {

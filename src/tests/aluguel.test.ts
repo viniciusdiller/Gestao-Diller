@@ -198,6 +198,29 @@ describe('Validações Zod Casa Itaúna', () => {
     expect(res.success).toBe(false);
   });
 
+  it('valida quantidade de hóspedes na reserva (mínimo 1)', () => {
+    const valid = CreateReservaSchema.safeParse({
+      hospede_id: 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11',
+      data_checkin: '2026-11-10',
+      data_checkout: '2026-11-15',
+      num_hospedes: 4,
+      valor_diaria: 600,
+    });
+    expect(valid.success).toBe(true);
+    if (valid.success) {
+      expect(valid.data.num_hospedes).toBe(4);
+    }
+
+    const invalid = CreateReservaSchema.safeParse({
+      hospede_id: 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11',
+      data_checkin: '2026-11-10',
+      data_checkout: '2026-11-15',
+      num_hospedes: 0,
+      valor_diaria: 600,
+    });
+    expect(invalid.success).toBe(false);
+  });
+
   it('valida criação de despesa operacional', () => {
     const valid = CreateDespesaSchema.safeParse({
       categoria: 'energia',
