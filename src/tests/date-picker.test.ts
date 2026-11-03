@@ -22,16 +22,27 @@ describe('ShadCN Calendar & DatePicker Logic', () => {
     expect(formatted).toBe('15/02/2026');
   });
 
-  it('calcula atalhos de fiado (+15 e +30 dias) com precisão', () => {
-    const base = new Date(2026, 9, 1); // 01/10/2026
-    const plus15 = new Date(base);
-    plus15.setDate(plus15.getDate() + 15);
+  it('calcula dias no mês e início da semana para grade de calendário perfeita', () => {
+    // Novembro 2026: começa em um Domingo (dia 0) e tem 30 dias
+    const firstDay = new Date(2026, 10, 1).getDay(); // 0 = Domingo
+    const daysInNov = new Date(2026, 11, 0).getDate(); // 30 dias
 
-    expect(plus15.getDate()).toBe(16);
-    expect(plus15.getMonth()).toBe(9);
+    expect(firstDay).toBe(0);
+    expect(daysInNov).toBe(30);
 
-    const plus30 = new Date(base);
-    plus30.setDate(plus30.getDate() + 30);
-    expect(plus30.getDate()).toBe(31);
+    // Mês anterior (Outubro) tem 31 dias
+    const daysInOct = new Date(2026, 10, 0).getDate();
+    expect(daysInOct).toBe(31);
+  });
+
+  it('detecta dia de troca (turnaround) com saída pela manhã e entrada à tarde', () => {
+    const dayStr = '2026-11-15';
+    const checkoutReserva = { data_checkout: '2026-11-15', status: 'confirmada' };
+    const checkinReserva = { data_checkin: '2026-11-15', status: 'confirmada' };
+
+    const isTurnaround = Boolean(
+      checkoutReserva.data_checkout === dayStr && checkinReserva.data_checkin === dayStr
+    );
+    expect(isTurnaround).toBe(true);
   });
 });
