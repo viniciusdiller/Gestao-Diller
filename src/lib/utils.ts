@@ -21,3 +21,5 @@ export function formatDateBR(dateInput: string | Date): string {
     timeZone: 'UTC',
   }).format(date);
 }
+
+export { sanitizePhoneForWhatsApp } from '@/lib/services/whatsapp';
