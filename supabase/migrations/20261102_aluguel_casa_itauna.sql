@@ -101,3 +101,4 @@ CREATE POLICY "aluguel_despesas_delete" ON public.aluguel_despesas FOR DELETE US
 
 -- Notifica o PostgREST para recarregar o schema cache
 NOTIFY pgrst, 'reload schema';
+
