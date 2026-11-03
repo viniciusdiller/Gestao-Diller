@@ -21,50 +21,37 @@ const COOKIE_NAME = 'gestao_workspace';
 
 export function WorkspaceProvider({
   children,
-  initialWorkspace = 'semijoias',
 }: {
   children: React.ReactNode;
   initialWorkspace?: WorkspaceType;
 }) {
   const router = useRouter();
   const pathname = usePathname();
-  const [workspace, setWorkspaceState] = React.useState<WorkspaceType>(initialWorkspace);
   const [isModalOpen, setIsModalOpen] = React.useState(false);
 
-  // Determina se a rota atual é da Casa Itaúna
-  const isItaunaRoute = pathname.startsWith('/itauna');
+  // A rota é a fonte única da verdade: evita race condition, desincronia e loop
+  const isCasaItauna = pathname.startsWith('/itauna');
+  const workspace: WorkspaceType = isCasaItauna ? 'casa_itauna' : 'semijoias';
 
-  // Inicializa a partir de cookie ou URL no primeiro carregamento
-  React.useEffect(() => {
-    if (isItaunaRoute && workspace !== 'casa_itauna') {
-      setWorkspaceState('casa_itauna');
-      return;
-    }
-
-    const saved = document.cookie
-      .split('; ')
-      .find((row) => row.startsWith(`${COOKIE_NAME}=`))
-      ?.split('=')[1] as WorkspaceType | undefined;
-
-    if (saved === 'casa_itauna' || saved === 'semijoias') {
-      setWorkspaceState(saved);
-    }
-  }, [isItaunaRoute, workspace]);
-
-  // Aplica classe CSS de tema no HTML com transição suave
+  // Sincroniza classes no elemento raiz HTML e cookie conforme a rota atual
   React.useEffect(() => {
     const root = document.documentElement;
-    root.classList.remove('theme-semijoias', 'theme-casa-itauna');
-    root.classList.add(`theme-${workspace}`);
+    root.classList.remove('theme-semijoias', 'theme-casa-itauna', 'theme-casa_itauna');
+    root.classList.add(isCasaItauna ? 'theme-casa-itauna' : 'theme-semijoias');
     document.cookie = `${COOKIE_NAME}=${workspace}; path=/; max-age=31536000; SameSite=Lax`;
-  }, [workspace]);
+  }, [isCasaItauna, workspace]);
 
   const setWorkspace = React.useCallback(
     (nextWs: WorkspaceType) => {
-      setWorkspaceState(nextWs);
+      // 1. Atualiza cookie
       document.cookie = `${COOKIE_NAME}=${nextWs}; path=/; max-age=31536000; SameSite=Lax`;
 
-      // Redireciona para o dashboard correto de acordo com a gestão selecionada
+      // 2. Atualiza classes CSS no DOM imediatamente para transição sem delay
+      const root = document.documentElement;
+      root.classList.remove('theme-semijoias', 'theme-casa-itauna', 'theme-casa_itauna');
+      root.classList.add(nextWs === 'casa_itauna' ? 'theme-casa-itauna' : 'theme-semijoias');
+
+      // 3. Navega para o destino correspondente apenas se não estiver nele
       if (nextWs === 'casa_itauna' && !pathname.startsWith('/itauna')) {
         router.push('/itauna');
       } else if (nextWs === 'semijoias' && pathname.startsWith('/itauna')) {
@@ -84,8 +71,8 @@ export function WorkspaceProvider({
         workspace,
         setWorkspace,
         toggleWorkspace,
-        isCasaItauna: workspace === 'casa_itauna',
-        isSemijoias: workspace === 'semijoias',
+        isCasaItauna,
+        isSemijoias: !isCasaItauna,
         isModalOpen,
         setIsModalOpen,
       }}

@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 import Image from 'next/image';
-import { Check, Gem, Waves, ArrowRight } from 'lucide-react';
+import { Check, Gem, Home, ArrowRight } from 'lucide-react';
 import { useWorkspace, WorkspaceType } from '@/contexts/workspace-context';
 import { Modal } from '@/components/ui/modal';
 
@@ -45,6 +45,7 @@ export function WorkspaceSwitcherModal() {
             </div>
             <div>
               <div className="flex items-center gap-1.5">
+                <Gem className="w-3.5 h-3.5 text-[#977f5a]" />
                 <h3 className="text-sm font-bold text-[#2d251e]">
                   Renata Diller
                 </h3>
@@ -92,6 +93,7 @@ export function WorkspaceSwitcherModal() {
             </div>
             <div>
               <div className="flex items-center gap-1.5">
+                <Home className="w-3.5 h-3.5 text-[#0369a1]" />
                 <h3 className="text-sm font-bold text-[#0f172a]">
                   Casa Itaúna
                 </h3>

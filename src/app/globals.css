@@ -36,28 +36,29 @@
   --radius: 0.85rem;
 }
 
-/* Tema Casa Itaúna (Praiano / Moderno / Refinado) */
-.theme-casa-itauna {
+/* Tema Casa Itaúna (Praiano / Moderno / Refinado - Totalmente distinto das Semijoias) */
+.theme-casa-itauna,
+.theme-casa_itauna {
   --background: #f8fafc;
   --foreground: #0f172a;
   --surface: #ffffff;
-  --surface-subtle: #f8fafc;
+  --surface-subtle: #f0f9ff;
   --border: #e2e8f0;
 
-  --primary: #0369a1; /* Azul Marinho Elegante */
+  --primary: #0369a1; /* Azul Marinho Principal */
   --primary-hover: #0284c7;
   --primary-foreground: #ffffff;
 
-  --secondary: #38bdf8; /* Azul Piscina Suave */
+  --secondary: #38bdf8; /* Azul Piscina Secundária */
   --secondary-foreground: #0369a1;
 
   --muted: #f1f5f9;
   --muted-foreground: #64748b;
 
-  --accent: #f0f9ff;
+  --accent: #e0f2fe;
   --accent-foreground: #0369a1;
 
-  --highlight: #f97316; /* Laranja Pôr do Sol Acolhedor */
+  --highlight: #f97316; /* Laranja Pôr do Sol Destaque */
   --highlight-foreground: #ffffff;
 
   --danger: #ef4444;

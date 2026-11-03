@@ -11,7 +11,7 @@ import {
   ReceiptText,
   CalendarDays,
   KeyRound,
-  Waves,
+  Home,
   Gem,
   ArrowLeftRight,
 } from 'lucide-react';
@@ -94,7 +94,14 @@ export function Header() {
   }
 
   return (
-    <header className="sticky top-0 z-30 bg-[var(--background)]/95 backdrop-blur-md border-b border-[var(--border)]/80 px-4 sm:px-6 lg:px-8 py-3 pt-safe transition-all duration-300">
+    <header
+      className={cn(
+        'sticky top-0 z-30 backdrop-blur-md px-4 sm:px-6 lg:px-8 py-3 pt-safe transition-all duration-300 shadow-2xs',
+        isCasaItauna
+          ? 'bg-white/95 border-b border-[#e2e8f0]'
+          : 'bg-[#f0e9df]/95 border-b border-[#e3dacd]'
+      )}
+    >
       <div className="max-w-5xl lg:max-w-6xl mx-auto flex items-center justify-between gap-4">
         {/* Brand / Logo com Disparo para Trocar Gestão */}
         <div
@@ -109,7 +116,7 @@ export function Header() {
               <div className="w-11 h-11 rounded-2xl overflow-hidden border-2 border-[#0369a1] shadow-2xs bg-white shrink-0 p-0.5 transition-all duration-300 animate-pop">
                 <Image
                   src="/logo-itauna.jpg"
-                  alt="Casa Itaúna - Saquarema"
+                  alt="Casa Itaúna — Saquarema"
                   width={44}
                   height={44}
                   className="w-full h-full object-cover rounded-xl"
@@ -117,10 +124,10 @@ export function Header() {
                 />
               </div>
             ) : (
-              <div className="w-11 h-11 rounded-2xl overflow-hidden border-2 border-[#e2e8f0] shadow-2xs bg-white shrink-0 p-0.5 group-hover:border-[#977f5a] transition-all duration-300 animate-pop">
+              <div className="w-11 h-11 rounded-2xl overflow-hidden border-2 border-[#977f5a] shadow-2xs bg-white shrink-0 p-0.5 group-hover:border-[#836d4b] transition-all duration-300 animate-pop">
                 <Image
-                  src="/diller.jpg"
-                  alt="Diller-Hub"
+                  src="/logo.jpg"
+                  alt="Renata Diller — Semijoias"
                   width={44}
                   height={44}
                   className="w-full h-full object-cover rounded-xl"
@@ -133,17 +140,24 @@ export function Header() {
           <div>
             <div className="flex items-center gap-1.5">
               <h1 className="text-[17px] font-black tracking-tight text-[var(--foreground)] leading-tight group-hover:text-[var(--primary)] transition-colors">
-                Diller-Hub
+                {isCasaItauna ? 'Casa Itaúna' : 'Renata Diller'}
               </h1>
             </div>
             <p className="text-[10px] font-bold tracking-[0.16em] text-[var(--primary)] uppercase flex items-center gap-1">
-              {isCasaItauna ? 'Casa Itaúna — Saquarema' : 'Renata Diller — Semijoias'}
+              {isCasaItauna ? 'Saquarema / RJ' : 'Semijoias'}
             </p>
           </div>
         </div>
 
         {/* Desktop Navigation Tabs (Telas médias e grandes) */}
-        <nav className="hidden md:flex items-center gap-1 bg-[var(--surface)]/90 backdrop-blur-md p-1.5 rounded-2xl border border-[var(--border)] shadow-xs transition-all">
+        <nav
+          className={cn(
+            'hidden md:flex items-center gap-1 backdrop-blur-md p-1.5 rounded-2xl border shadow-xs transition-all',
+            isCasaItauna
+              ? 'bg-slate-50/90 border-[#e2e8f0]'
+              : 'bg-[#faf6f0]/90 border-[#e3dacd]'
+          )}
+        >
           {activeNavItems.map((item) => {
             const Icon = item.icon;
             return (
@@ -154,8 +168,12 @@ export function Header() {
                 className={cn(
                   'flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold transition-all duration-200 cursor-pointer select-none',
                   item.active
-                    ? 'bg-[var(--primary)] text-white shadow-xs scale-[1.02]'
-                    : 'text-[var(--muted-foreground)] hover:text-[var(--foreground)] hover:bg-black/5 active:scale-95'
+                    ? isCasaItauna
+                      ? 'bg-[#0369a1] text-white shadow-xs scale-[1.02]'
+                      : 'bg-[#977f5a] text-white shadow-xs scale-[1.02]'
+                    : isCasaItauna
+                    ? 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/50 active:scale-95'
+                    : 'text-[#766a5e] hover:text-[#2d251e] hover:bg-[#ebdcca]/50 active:scale-95'
                 )}
               >
                 <Icon className="w-4 h-4" />
@@ -170,19 +188,24 @@ export function Header() {
           {/* Botão Trocar Gestão */}
           <button
             onClick={() => setIsModalOpen(true)}
-            className="h-10 px-3 flex items-center gap-1.5 rounded-2xl bg-[var(--surface)] text-[var(--foreground)] border border-[var(--border)] hover:border-[var(--primary)] shadow-xs touch-pill active:scale-95 transition-all cursor-pointer"
+            className={cn(
+              'h-10 px-3 flex items-center gap-1.5 rounded-2xl shadow-xs touch-pill active:scale-95 transition-all cursor-pointer',
+              isCasaItauna
+                ? 'bg-[#f0f9ff] text-[#0369a1] border border-[#bae6fd] hover:border-[#0369a1]'
+                : 'bg-white text-[#2d251e] border border-[#e3dacd] hover:border-[#977f5a]'
+            )}
             title="Alternar entre Semijoias e Casa Itaúna"
             aria-label="Alternar Gestão"
           >
             {isCasaItauna ? (
-              <Waves className="w-4 h-4 text-[#0369a1]" />
+              <Home className="w-4 h-4 text-[#0369a1]" />
             ) : (
               <Gem className="w-4 h-4 text-[#977f5a]" />
             )}
             <span className="hidden sm:inline text-xs font-bold">
               {isCasaItauna ? 'Casa Itaúna' : 'Semijoias'}
             </span>
-            <ArrowLeftRight className="w-3.5 h-3.5 text-[var(--muted-foreground)] ml-0.5" />
+            <ArrowLeftRight className="w-3.5 h-3.5 opacity-60 ml-0.5" />
           </button>
 
           {/* Botão de Logout */}
