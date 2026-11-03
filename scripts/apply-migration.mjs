@@ -2,9 +2,17 @@ import fs from 'node:fs';
 import path from 'node:path';
 import pg from 'pg';
 
-const dbUrl = process.env.SUPABASE_DB_URL;
+let dbUrl = process.env.SUPABASE_DB_URL;
+if (!dbUrl && fs.existsSync('.env.local')) {
+  const envContent = fs.readFileSync('.env.local', 'utf8');
+  const match = envContent.match(/SUPABASE_DB_URL=([^\r\n]+)/);
+  if (match) {
+    dbUrl = match[1].trim();
+  }
+}
+
 if (!dbUrl) {
-  console.error('SUPABASE_DB_URL não definida nas variáveis de ambiente.');
+  console.error('SUPABASE_DB_URL não definida nas variáveis de ambiente nem no .env.local.');
   process.exit(1);
 }
 
@@ -18,35 +26,35 @@ async function run() {
     await client.connect();
     console.log('✓ Conectado ao banco Supabase PostgreSQL com sucesso!');
 
-    const migrationPath = path.resolve('supabase/migrations/20261102_initial_schema.sql');
-    const sql = fs.readFileSync(migrationPath, 'utf8');
+    const migrationsDir = path.resolve('supabase/migrations');
+    const files = fs.readdirSync(migrationsDir)
+      .filter(f => f.endsWith('.sql'))
+      .sort();
 
-    console.log('Aplicando migration...');
-    await client.query(sql);
-    console.log('✓ Migration 20261102_initial_schema.sql executada com sucesso!');
+    console.log(`Encontradas ${files.length} migrations:`, files);
 
-    // Verificar se as tabelas foram criadas
-    const tablesRes = await client.query(`
-      SELECT table_name 
-      FROM information_schema.tables 
-      WHERE table_schema = 'public' 
-        AND table_name IN ('clients', 'sales', 'installments');
-    `);
-    console.log('Tabelas verificadas:', tablesRes.rows.map(r => r.table_name).join(', '));
-
-    // Tentar consultar configurações de autenticação / JWT se disponíveis
-    try {
-      const jwtRes = await client.query(`
-        SELECT name, decrypted_secret 
-        FROM vault.decrypted_secrets 
-        WHERE name LIKE '%jwt%' OR name LIKE '%anon%' OR name LIKE '%service%';
-      `);
-      if (jwtRes.rows.length > 0) {
-        console.log('Vault secrets encontrados:', jwtRes.rows.map(r => r.name));
-      }
-    } catch {
-      // Vault pode não ter secrets expostos diretamente
+    for (const file of files) {
+      const filePath = path.join(migrationsDir, file);
+      const sql = fs.readFileSync(filePath, 'utf8');
+      console.log(`Aplicando ${file}...`);
+      await client.query(sql);
+      console.log(`✓ ${file} executada com sucesso!`);
     }
+
+    // Recarregar cache de schema do PostgREST
+    await client.query("NOTIFY pgrst, 'reload schema';");
+    console.log('✓ PostgREST schema cache reloaded!');
+
+    // Inspecionar colunas de installments
+    const columnsRes = await client.query(`
+      SELECT column_name, data_type, is_nullable
+      FROM information_schema.columns
+      WHERE table_schema = 'public' AND table_name = 'installments'
+      ORDER BY ordinal_position;
+    `);
+
+    console.log('\nColunas atuais da tabela installments:');
+    columnsRes.rows.forEach(r => console.log(` - ${r.column_name} (${r.data_type})`));
 
   } catch (err) {
     console.error('Erro na execução da migration:', err);
