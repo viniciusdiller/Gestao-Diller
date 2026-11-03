@@ -37,7 +37,7 @@ export function generateBillingMessage(params: BillingMessageParams): string {
       ? ` (parcela ${installmentNumber}/${totalInstallments})`
       : '';
 
-  return `Oi, ${firstName}! Tudo bem? Passando pra lembrar do vencimento da sua parcela${installmentInfo} de ${formattedAmount} com a Renata Semijoias no dia ${formattedDate}. Qualquer dúvida estou à disposição! Se já realizou o pagamento, desconsidere essa mensagem. ✨`;
+  return `Oi, ${firstName}! Tudo bem? Passando pra lembrar do vencimento da sua parcela${installmentInfo} de ${formattedAmount} com a Renata Semijoias no dia ${formattedDate}. Qualquer dúvida estou à disposição! Se já realizou o pagamento, desconsidere essa mensagem.`;
 }
 
 export function getWhatsAppBillingUrl(
@@ -76,7 +76,7 @@ export function generateSaleReceiptMessage(params: SaleReceiptParams): string {
 
   const methodText = paymentLabels[paymentMethod] || paymentMethod.toUpperCase();
 
-  return `Oi, ${firstName}! ✨ Passando pra registrar seu pedido com a Renata Semijoias: ${description} no valor de ${formattedAmount} (${methodText}). Muito obrigada pela preferência e confiança! Qualquer dúvida estou sempre por aqui. 🥰`;
+  return `Oi, ${firstName}! Passando pra registrar seu pedido com a Renata Semijoias: ${description} no valor de ${formattedAmount} (${methodText}). Muito obrigada pela preferência e confiança! Qualquer dúvida estou à disposição.`;
 }
 
 export function getWhatsAppReceiptUrl(
