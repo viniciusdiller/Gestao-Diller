@@ -23,6 +23,8 @@ import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { CurrencyInput } from '@/components/ui/currency-input';
+import { PhoneInput } from '@/components/ui/phone-input';
 import { Modal } from '@/components/ui/modal';
 import { DatePicker } from '@/components/ui/date-picker';
 import { Combobox } from '@/components/ui/combobox';
@@ -669,10 +671,10 @@ export default function ItaunaReservasPage() {
                   onChange={(e) => setQuickNome(e.target.value)}
                   className="h-10 text-xs bg-white"
                 />
-                <Input
-                  placeholder="WhatsApp com DDD (opcional)"
+                <PhoneInput
+                  placeholder="(21) 99999-8888 (opcional)"
                   value={quickTelefone}
-                  onChange={(e) => setQuickTelefone(e.target.value)}
+                  onChange={setQuickTelefone}
                   className="h-10 text-xs bg-white"
                 />
                 <Button
@@ -748,13 +750,9 @@ export default function ItaunaReservasPage() {
               <label className="text-xs font-semibold text-[#0f172a]">
                 Valor da Diária (R$) *
               </label>
-              <Input
-                type="number"
-                step="0.01"
-                min="0"
+              <CurrencyInput
                 value={valorDiaria}
-                onChange={(e) => setValorDiaria(parseFloat(e.target.value) || 0)}
-                placeholder="Ex: 600.00"
+                onChange={setValorDiaria}
                 className="h-11 bg-white font-bold"
               />
             </div>
@@ -763,13 +761,9 @@ export default function ItaunaReservasPage() {
               <label className="text-xs font-semibold text-[#0f172a]">
                 Taxa de Faxina (R$) *
               </label>
-              <Input
-                type="number"
-                step="0.01"
-                min="0"
+              <CurrencyInput
                 value={taxaLimpeza}
-                onChange={(e) => setTaxaLimpeza(parseFloat(e.target.value) || 0)}
-                placeholder="Ex: 180.00"
+                onChange={setTaxaLimpeza}
                 className="h-11 bg-white font-semibold"
               />
             </div>
@@ -949,23 +943,17 @@ export default function ItaunaReservasPage() {
             <div className="grid grid-cols-3 gap-2.5">
               <div className="space-y-1">
                 <label className="text-xs font-semibold text-[#0f172a]">Diária (R$)</label>
-                <Input
-                  type="number"
-                  step="0.01"
-                  min="0"
+                <CurrencyInput
                   value={editValorDiaria}
-                  onChange={(e) => setEditValorDiaria(parseFloat(e.target.value) || 0)}
+                  onChange={setEditValorDiaria}
                   className="h-11 bg-white font-bold"
                 />
               </div>
               <div className="space-y-1">
                 <label className="text-xs font-semibold text-[#0f172a]">Faxina (R$)</label>
-                <Input
-                  type="number"
-                  step="0.01"
-                  min="0"
+                <CurrencyInput
                   value={editTaxaLimpeza}
-                  onChange={(e) => setEditTaxaLimpeza(parseFloat(e.target.value) || 0)}
+                  onChange={setEditTaxaLimpeza}
                   className="h-11 bg-white font-semibold"
                 />
               </div>

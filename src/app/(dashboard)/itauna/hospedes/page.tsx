@@ -15,10 +15,12 @@ import {
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { PhoneInput } from '@/components/ui/phone-input';
 import { Modal } from '@/components/ui/modal';
 import { Pagination } from '@/components/ui/pagination';
 import { LoadingState } from '@/components/ui/loading-state';
 import { useToast } from '@/components/ui/toast';
+import { maskPhone } from '@/lib/masks';
 import {
   getHospedesAction,
   createHospedeAction,
@@ -114,7 +116,7 @@ export default function ItaunaHospedesPage() {
   function handleOpenEdit(h: Hospede) {
     setHospedeToEdit(h);
     setEditName(h.nome);
-    setEditPhone(h.telefone || '');
+    setEditPhone(maskPhone(h.telefone || ''));
     setEditNotes(h.notas_observacoes || '');
     setEditError(null);
   }
@@ -359,10 +361,10 @@ export default function ItaunaHospedesPage() {
 
           <div className="space-y-1">
             <label className="text-xs font-semibold text-[#0f172a]">Telefone / WhatsApp</label>
-            <Input
-              placeholder="Ex: 21999998888"
+            <PhoneInput
+              placeholder="(21) 99999-8888"
               value={phone}
-              onChange={(e) => setPhone(e.target.value)}
+              onChange={setPhone}
               className="h-11 bg-white"
             />
           </div>
@@ -414,9 +416,10 @@ export default function ItaunaHospedesPage() {
 
             <div className="space-y-1">
               <label className="text-xs font-semibold text-[#0f172a]">Telefone / WhatsApp</label>
-              <Input
+              <PhoneInput
+                placeholder="(21) 99999-8888"
                 value={editPhone}
-                onChange={(e) => setEditPhone(e.target.value)}
+                onChange={setEditPhone}
                 className="h-11 bg-white"
               />
             </div>

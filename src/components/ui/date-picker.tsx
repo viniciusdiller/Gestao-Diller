@@ -44,7 +44,7 @@ export function DatePicker({
   // Formata a data selecionada para exibição em português
   const displayText = React.useMemo(() => {
     if (!selectedDate) return '';
-    return format(selectedDate, "dd 'de' MMMM 'de' yyyy", { locale: ptBR });
+    return format(selectedDate, "dd 'de' MMM 'de' yyyy", { locale: ptBR });
   }, [selectedDate]);
 
   // Fecha ao clicar fora
@@ -103,7 +103,7 @@ export function DatePicker({
           <CalendarIcon className="w-4 h-4 text-[#0369a1] shrink-0" />
           <span
             className={cn(
-              'truncate font-medium capitalize',
+              'truncate font-semibold capitalize',
               !selectedDate && 'text-slate-400 font-normal'
             )}
           >
@@ -125,17 +125,18 @@ export function DatePicker({
         </div>
       </div>
 
-      {/* Popover / Dropdown do Calendário ShadCN */}
+      {/* Popover / Dropdown do Calendário com Largura Fixa e Opaque Background */}
       {isOpen && (
         <div
+          style={{ width: '295px', maxWidth: 'calc(100vw - 2rem)' }}
           className={cn(
-            'absolute top-[calc(100%+6px)] z-[80] w-[310px] sm:w-[320px] max-w-[calc(100vw-2rem)] rounded-2xl border border-slate-200 bg-white p-3 shadow-[0_18px_40px_rgba(15,23,42,0.18)] animate-dropdown origin-top',
+            'absolute top-[calc(100%+6px)] z-[100] rounded-2xl border border-slate-200 bg-white p-3.5 shadow-[0_20px_45px_rgba(15,23,42,0.22)] animate-dropdown origin-top',
             align === 'right' ? 'right-0' : 'left-0'
           )}
         >
           {/* Botões de Atalho Rápido para Vendas e Reservas */}
           {showPresets && (
-            <div className="flex items-center gap-1.5 pb-2 mb-2 border-b border-slate-100 overflow-x-auto text-xs no-scrollbar">
+            <div className="flex items-center gap-1.5 pb-2.5 mb-2.5 border-b border-slate-100 overflow-x-auto text-xs no-scrollbar">
               <button
                 type="button"
                 onClick={() => handleApplyOffset(0)}
@@ -167,9 +168,8 @@ export function DatePicker({
             </div>
           )}
 
-          {/* Calendário ShadCN UI com react-day-picker */}
+          {/* Calendário Nativo e Responsivo */}
           <Calendar
-            mode="single"
             selected={selectedDate}
             onSelect={handleSelect}
             className="w-full border-none shadow-none p-0"

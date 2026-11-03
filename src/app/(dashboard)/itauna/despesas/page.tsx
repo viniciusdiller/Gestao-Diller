@@ -19,6 +19,7 @@ import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { CurrencyInput } from '@/components/ui/currency-input';
 import { Modal } from '@/components/ui/modal';
 import { DatePicker } from '@/components/ui/date-picker';
 import { Pagination } from '@/components/ui/pagination';
@@ -416,14 +417,9 @@ export default function ItaunaDespesasPage() {
           <div className="grid grid-cols-2 gap-2.5">
             <div className="space-y-1">
               <label className="text-xs font-semibold text-[#0f172a]">Valor (R$) *</label>
-              <Input
-                type="number"
-                step="0.01"
-                min="0.01"
-                placeholder="Ex: 280.00"
-                value={valor || ''}
-                onChange={(e) => setValor(parseFloat(e.target.value) || 0)}
-                required
+              <CurrencyInput
+                value={valor}
+                onChange={setValor}
                 className="h-11 bg-white font-bold"
               />
             </div>
@@ -493,13 +489,9 @@ export default function ItaunaDespesasPage() {
             <div className="grid grid-cols-2 gap-2.5">
               <div className="space-y-1">
                 <label className="text-xs font-semibold text-[#0f172a]">Valor (R$) *</label>
-                <Input
-                  type="number"
-                  step="0.01"
-                  min="0.01"
+                <CurrencyInput
                   value={editValor}
-                  onChange={(e) => setEditValor(parseFloat(e.target.value) || 0)}
-                  required
+                  onChange={setEditValor}
                   className="h-11 bg-white font-bold"
                 />
               </div>

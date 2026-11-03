@@ -11,7 +11,7 @@ export interface PhoneInputProps
 }
 
 export const PhoneInput = React.forwardRef<HTMLInputElement, PhoneInputProps>(
-  ({ className, value, onChange, placeholder = '(11) 98765-4321', ...props }, ref) => {
+  ({ className, value, onChange, placeholder = '(21) 98765-4321', ...props }, ref) => {
     function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
       const raw = e.target.value;
       const masked = maskPhone(raw);
@@ -28,7 +28,7 @@ export const PhoneInput = React.forwardRef<HTMLInputElement, PhoneInputProps>(
         value={value}
         onChange={handleChange}
         className={cn(
-          'flex h-12 w-full rounded-xl border border-[#dfd5c4] bg-white px-3.5 py-2 text-base text-[#2d251e] placeholder:text-[#a09485] transition-all focus:border-[#977f5a] focus:outline-none focus:ring-2 focus:ring-[#977f5a]/20 min-h-[44px]',
+          'flex h-11 w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-sm sm:text-base text-[#0f172a] placeholder:text-slate-400 transition-all focus:border-[#0369a1] focus:outline-none focus:ring-2 focus:ring-[#0369a1]/20 shadow-2xs min-h-[44px]',
           className
         )}
         {...props}
@@ -37,4 +37,3 @@ export const PhoneInput = React.forwardRef<HTMLInputElement, PhoneInputProps>(
   }
 );
 PhoneInput.displayName = 'PhoneInput';
-
