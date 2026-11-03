@@ -28,18 +28,23 @@ describe('Suíte de Testes dos Fluxos da Casa Itaúna', () => {
     expect(parsed.success).toBe(true);
 
     if (parsed.success) {
+      expect(parsed.data.tem_comissao_dani).toBe(true); // Padrão ativa
+
       const totals = calculateReservaTotals({
         checkin: parsed.data.data_checkin,
         checkout: parsed.data.data_checkout,
         valorDiaria: parsed.data.valor_diaria,
         taxaLimpeza: parsed.data.taxa_limpeza,
         taxaPlataforma: parsed.data.taxa_plataforma,
+        temComissaoDani: parsed.data.tem_comissao_dani,
       });
 
       expect(totals.num_diarias).toBe(7);
       expect(totals.subtotal_diarias).toBe(8400); // 7 * 1200
-      expect(totals.valor_total).toBe(8650); // 8400 + 250
-      expect(totals.lucro_liquido_reserva).toBe(8000); // 8650 - 400 taxa - 250 faxina = 8000
+      expect(totals.valor_total).toBe(8400); // Faxina não é somada
+      expect(totals.saldo_apos_plataforma_e_faxina).toBe(7750); // 8400 - 400 taxa - 250 faxina
+      expect(totals.valor_comissao_dani).toBe(1550); // 20% sobre 7750
+      expect(totals.lucro_liquido_reserva).toBe(6200); // 7750 - 1550
     }
   });
 

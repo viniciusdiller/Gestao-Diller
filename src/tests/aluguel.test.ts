@@ -21,32 +21,33 @@ describe('Calculador Financeiro e Operacional da Casa Itaúna', () => {
   });
 
   it('calcula os totais da reserva: subtotal, taxa de limpeza e lucro líquido deduzindo comissão', () => {
-    // 4 diárias a R$ 650/dia + R$ 200 limpeza. Airbnb cobrou R$ 350 de comissão fixa
+    // 4 diárias a R$ 650/dia. Faxina R$ 200 (deduzida como custo). Airbnb R$ 350 de comissão fixa
     const res = calculateReservaTotals({
       checkin: '2026-11-20',
       checkout: '2026-11-24',
       valorDiaria: 650,
       taxaLimpeza: 200,
       taxaPlataforma: 350,
+      temComissaoDani: false,
     });
 
     expect(res.num_diarias).toBe(4);
     expect(res.subtotal_diarias).toBe(2600);
     expect(res.taxa_limpeza).toBe(200);
-    expect(res.valor_total).toBe(2800); // 2600 + 200
+    expect(res.valor_total).toBe(2600); // Exclusivamente as diárias, faxina não é somada
     expect(res.taxa_plataforma).toBe(350);
+    expect(res.saldo_apos_plataforma_e_faxina).toBe(2050); // 2600 - 350 - 200
+    expect(res.lucro_liquido_real).toBe(2050);
   });
 
   it('calcula comissão da plataforma em % (ex: 16% Airbnb), despesa de faxina R$ 180 e comissão da Dani 20%', () => {
-    // Exemplo real do usuário:
     // 5 noites a R$ 600/noite = R$ 3.000 subtotal
-    // Taxa de limpeza = R$ 180,00
-    // Total cobrado = R$ 3.180,00
-    // Taxa Airbnb 16% sobre R$ 3.180,00 = R$ 508,80
-    // Despesa faxina = R$ 180,00
-    // Saldo após Airbnb e faxina = 3180 - 508.80 - 180 = R$ 2.491,20
-    // Dani tira 20% do que sobrou = 2491.20 * 0.20 = R$ 498,24
-    // Lucro Líquido Real dos Proprietários = 2491.20 - 498.24 = R$ 1.992,96
+    // Total cobrado da reserva = R$ 3.000,00 (sem somar faxina)
+    // Taxa Airbnb 16% sobre R$ 3.000,00 = R$ 480,00
+    // Despesa faxina = R$ 180,00 deduzida
+    // Saldo após Airbnb e faxina = 3000 - 480 - 180 = R$ 2.340,00
+    // Dani tira 20% do que sobrou = 2340 * 0.20 = R$ 468,00
+    // Lucro Líquido Real dos Proprietários = 2340 - 468 = R$ 1.872,00
     const res = calculateReservaTotals({
       checkin: '2026-11-10',
       checkout: '2026-11-15',
@@ -60,13 +61,13 @@ describe('Calculador Financeiro e Operacional da Casa Itaúna', () => {
     expect(res.num_diarias).toBe(5);
     expect(res.subtotal_diarias).toBe(3000);
     expect(res.taxa_limpeza).toBe(180);
-    expect(res.valor_total).toBe(3180);
+    expect(res.valor_total).toBe(3000);
     expect(res.taxa_plataforma_percentual).toBe(16);
-    expect(res.taxa_plataforma).toBe(508.8);
-    expect(res.saldo_apos_plataforma_e_faxina).toBe(2491.2);
+    expect(res.taxa_plataforma).toBe(480);
+    expect(res.saldo_apos_plataforma_e_faxina).toBe(2340);
     expect(res.tem_comissao_dani).toBe(true);
-    expect(res.valor_comissao_dani).toBe(498.24);
-    expect(res.lucro_liquido_real).toBe(1992.96);
+    expect(res.valor_comissao_dani).toBe(468);
+    expect(res.lucro_liquido_real).toBe(1872);
   });
 
   it('identifica corretamente o status de vacância para hoje (Livre vs Ocupada)', () => {
@@ -170,6 +171,25 @@ describe('Calculador Financeiro e Operacional da Casa Itaúna', () => {
 
     // Ignora o próprio ID em edição
     expect(hasDateConflict(existing, '2026-11-10', '2026-11-15', 'res-1')).toBe(false);
+  });
+
+  it('permite troca de hóspedes no mesmo dia (Turnaround: Check-out 11h e Check-in 14h)', () => {
+    const reserva1 = {
+      id: 'res-1',
+      data_checkin: '2026-11-10',
+      data_checkout: '2026-11-15',
+      status: 'confirmada',
+    };
+    const reserva2 = {
+      id: 'res-2',
+      data_checkin: '2026-11-15',
+      data_checkout: '2026-11-20',
+      status: 'confirmada',
+    };
+
+    // Ambas são aceitas sem conflito
+    expect(hasDateConflict([reserva1], reserva2.data_checkin, reserva2.data_checkout)).toBe(false);
+    expect(hasDateConflict([reserva2], reserva1.data_checkin, reserva1.data_checkout)).toBe(false);
   });
 });
 
