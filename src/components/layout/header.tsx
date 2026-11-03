@@ -9,15 +9,22 @@ import {
   ShoppingBag,
   Users,
   ReceiptText,
+  CalendarDays,
+  KeyRound,
+  Waves,
+  Gem,
+  ArrowLeftRight,
 } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
+import { useWorkspace } from '@/contexts/workspace-context';
 import { cn } from '@/lib/utils';
 
 export function Header() {
   const router = useRouter();
   const pathname = usePathname();
+  const { workspace, isCasaItauna, setIsModalOpen } = useWorkspace();
 
-  const navItems = [
+  const semijoiasNavItems = [
     {
       label: 'Início',
       href: '/',
@@ -44,6 +51,41 @@ export function Header() {
     },
   ];
 
+  const casaItaunaNavItems = [
+    {
+      label: 'Início',
+      href: '/itauna',
+      icon: LayoutDashboard,
+      active: pathname === '/itauna',
+    },
+    {
+      label: 'Calendário',
+      href: '/itauna/calendario',
+      icon: CalendarDays,
+      active: pathname.startsWith('/itauna/calendario'),
+    },
+    {
+      label: 'Reservas',
+      href: '/itauna/reservas',
+      icon: KeyRound,
+      active: pathname.startsWith('/itauna/reservas'),
+    },
+    {
+      label: 'Hóspedes',
+      href: '/itauna/hospedes',
+      icon: Users,
+      active: pathname.startsWith('/itauna/hospedes'),
+    },
+    {
+      label: 'Despesas',
+      href: '/itauna/despesas',
+      icon: ReceiptText,
+      active: pathname.startsWith('/itauna/despesas'),
+    },
+  ];
+
+  const activeNavItems = isCasaItauna ? casaItaunaNavItems : semijoiasNavItems;
+
   async function handleLogout() {
     const supabase = createClient();
     await supabase.auth.signOut();
@@ -52,38 +94,57 @@ export function Header() {
   }
 
   return (
-    <header className="sticky top-0 z-30 bg-[#f0e9df]/95 backdrop-blur-md border-b border-[#dfd5c4]/80 px-4 sm:px-6 lg:px-8 py-3 pt-safe transition-all">
+    <header className="sticky top-0 z-30 bg-[var(--background)]/95 backdrop-blur-md border-b border-[var(--border)]/80 px-4 sm:px-6 lg:px-8 py-3 pt-safe transition-all duration-300">
       <div className="max-w-5xl lg:max-w-6xl mx-auto flex items-center justify-between gap-4">
-        {/* Brand / Logo */}
-        <Link href="/" className="flex items-center gap-3 group cursor-pointer select-none">
+        {/* Brand / Logo com Disparo para Trocar Gestão */}
+        <div
+          role="button"
+          tabIndex={0}
+          onClick={() => setIsModalOpen(true)}
+          className="flex items-center gap-3 group cursor-pointer select-none"
+          title="Clique para alternar entre Semijoias e Casa Itaúna"
+        >
           <div className="relative">
-            <div className="w-11 h-11 rounded-full overflow-hidden border-2 border-[#977f5a]/40 shadow-[0_2px_8px_rgba(151,127,90,0.18)] bg-white shrink-0 p-0.5 group-hover:border-[#977f5a] transition-all duration-200">
-              <Image
-                src="/logo.jpg"
-                alt="Renata Diller Semijoias"
-                width={44}
-                height={44}
-                className="w-full h-full object-cover rounded-full"
-                priority
-              />
-            </div>
+            {isCasaItauna ? (
+              <div className="w-11 h-11 rounded-full overflow-hidden border-2 border-[#0369a1] shadow-[0_2px_10px_rgba(3,105,161,0.25)] bg-white shrink-0 p-0.5 transition-all duration-300 animate-pop">
+                <Image
+                  src="/logo-itauna.jpg"
+                  alt="Casa Itaúna - Saquarema"
+                  width={44}
+                  height={44}
+                  className="w-full h-full object-cover rounded-full"
+                  priority
+                />
+              </div>
+            ) : (
+              <div className="w-11 h-11 rounded-full overflow-hidden border-2 border-[#977f5a]/40 shadow-[0_2px_8px_rgba(151,127,90,0.18)] bg-white shrink-0 p-0.5 group-hover:border-[#977f5a] transition-all duration-300 animate-pop">
+                <Image
+                  src="/logo.jpg"
+                  alt="Gestão Diller"
+                  width={44}
+                  height={44}
+                  className="w-full h-full object-cover rounded-full"
+                  priority
+                />
+              </div>
+            )}
           </div>
 
           <div>
             <div className="flex items-center gap-1.5">
-              <h1 className="text-[17px] font-bold tracking-tight text-[#28211b] leading-tight group-hover:text-[#977f5a] transition-colors">
-                Renata Diller
+              <h1 className="text-[17px] font-bold tracking-tight text-[var(--foreground)] leading-tight group-hover:text-[var(--primary)] transition-colors">
+                Gestão Diller
               </h1>
             </div>
-            <p className="text-[10px] font-bold tracking-[0.22em] text-[#977f5a] uppercase">
-              Semijoias Finas
+            <p className="text-[10px] font-bold tracking-[0.20em] text-[var(--primary)] uppercase flex items-center gap-1">
+              {isCasaItauna ? 'Casa Itaúna — Temporada' : 'Semijoias Finas'}
             </p>
           </div>
-        </Link>
+        </div>
 
-        {/* Desktop Navigation Tabs (Apenas telas médias e grandes) */}
-        <nav className="hidden md:flex items-center gap-1 bg-[#ffffff]/80 backdrop-blur-md p-1.5 rounded-2xl border border-[#dfd5c4] shadow-xs">
-          {navItems.map((item) => {
+        {/* Desktop Navigation Tabs (Telas médias e grandes) */}
+        <nav className="hidden md:flex items-center gap-1 bg-[var(--surface)]/90 backdrop-blur-md p-1.5 rounded-2xl border border-[var(--border)] shadow-xs transition-all">
+          {activeNavItems.map((item) => {
             const Icon = item.icon;
             return (
               <Link
@@ -91,10 +152,10 @@ export function Header() {
                 href={item.href}
                 prefetch={true}
                 className={cn(
-                  'flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold transition-all duration-200 cursor-pointer select-none',
+                  'flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold transition-all duration-200 cursor-pointer select-none',
                   item.active
-                    ? 'bg-[#977f5a] text-white shadow-xs scale-[1.02]'
-                    : 'text-[#6b5e52] hover:text-[#28211b] hover:bg-black/5 active:scale-95'
+                    ? 'bg-[var(--primary)] text-white shadow-xs scale-[1.02]'
+                    : 'text-[var(--muted-foreground)] hover:text-[var(--foreground)] hover:bg-black/5 active:scale-95'
                 )}
               >
                 <Icon className="w-4 h-4" />
@@ -104,11 +165,30 @@ export function Header() {
           })}
         </nav>
 
-        {/* Botão de Logout */}
+        {/* Ações: Botão Trocar Gestão e Logout */}
         <div className="flex items-center gap-2">
+          {/* Botão Trocar Gestão */}
+          <button
+            onClick={() => setIsModalOpen(true)}
+            className="h-10 px-3 flex items-center gap-1.5 rounded-2xl bg-[var(--surface)] text-[var(--foreground)] border border-[var(--border)] hover:border-[var(--primary)] shadow-xs touch-pill active:scale-95 transition-all cursor-pointer"
+            title="Alternar entre Semijoias e Casa Itaúna"
+            aria-label="Alternar Gestão"
+          >
+            {isCasaItauna ? (
+              <Waves className="w-4 h-4 text-[#0369a1]" />
+            ) : (
+              <Gem className="w-4 h-4 text-[#977f5a]" />
+            )}
+            <span className="hidden sm:inline text-xs font-bold">
+              {isCasaItauna ? 'Casa Itaúna' : 'Semijoias'}
+            </span>
+            <ArrowLeftRight className="w-3.5 h-3.5 text-[var(--muted-foreground)] ml-0.5" />
+          </button>
+
+          {/* Botão de Logout */}
           <button
             onClick={handleLogout}
-            className="h-10 px-3.5 flex items-center gap-1.5 rounded-2xl text-[#87786b] hover:text-[#b91c1c] hover:bg-black/5 active:scale-95 transition-all border border-transparent hover:border-[#dfd5c4] cursor-pointer"
+            className="h-10 px-3 flex items-center gap-1.5 rounded-2xl text-[var(--muted-foreground)] hover:text-[#b91c1c] hover:bg-black/5 active:scale-95 transition-all border border-transparent hover:border-[var(--border)] cursor-pointer"
             title="Sair do sistema"
             aria-label="Sair da conta"
           >
