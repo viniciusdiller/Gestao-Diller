@@ -32,6 +32,7 @@ interface ReservaItem {
   id: string;
   data_checkin: string;
   data_checkout: string;
+  num_hospedes?: number;
   num_diarias: number;
   valor_diaria: number;
   taxa_limpeza: number;
@@ -422,18 +423,24 @@ export default function ItaunaCalendarioPage() {
               )}
             </div>
 
-            {/* Período de Estadia */}
-            <div className="grid grid-cols-2 gap-2 text-xs">
-              <div className="p-3 rounded-xl bg-[#f8fafc] border border-[#e2e8f0]">
-                <span className="text-[#64748b]">Check-in</span>
-                <p className="font-bold text-[#0f172a] text-sm mt-0.5">
+            {/* Período de Estadia e Hóspedes */}
+            <div className="grid grid-cols-3 gap-2 text-xs">
+              <div className="p-2.5 rounded-xl bg-[#f8fafc] border border-[#e2e8f0]">
+                <span className="text-[#64748b] block text-[10px]">Check-in</span>
+                <p className="font-bold text-[#0f172a] text-xs mt-0.5">
                   {formatDateBR(selectedReserva.data_checkin)}
                 </p>
               </div>
-              <div className="p-3 rounded-xl bg-[#f8fafc] border border-[#e2e8f0]">
-                <span className="text-[#64748b]">Check-out</span>
-                <p className="font-bold text-[#0f172a] text-sm mt-0.5">
+              <div className="p-2.5 rounded-xl bg-[#f8fafc] border border-[#e2e8f0]">
+                <span className="text-[#64748b] block text-[10px]">Check-out</span>
+                <p className="font-bold text-[#0f172a] text-xs mt-0.5">
                   {formatDateBR(selectedReserva.data_checkout)}
+                </p>
+              </div>
+              <div className="p-2.5 rounded-xl bg-[#f8fafc] border border-[#e2e8f0]">
+                <span className="text-[#64748b] block text-[10px]">Hóspedes</span>
+                <p className="font-bold text-[#0369a1] text-xs mt-0.5">
+                  {selectedReserva.num_hospedes || 1} pessoas
                 </p>
               </div>
             </div>

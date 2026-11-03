@@ -2,24 +2,24 @@ import type { MetadataRoute } from 'next';
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: 'Renata Diller — Semijoias',
-    short_name: 'Renata Semijoias',
-    description: 'Gestão Financeira e Vendas para Renata Diller Semijoias',
+    name: 'Diller-Hub — Gestão Integrada',
+    short_name: 'Diller-Hub',
+    description: 'Hub de Gestão Integrada de Negócios (Semijoias e Temporada)',
     start_url: '/',
     display: 'standalone',
     orientation: 'portrait',
-    background_color: '#f0e9df',
-    theme_color: '#977f5a',
+    background_color: '#f8fafc',
+    theme_color: '#0f172a',
     icons: [
       {
-        src: '/logo.jpg',
+        src: '/diller.jpg',
         sizes: 'any',
         type: 'image/jpeg',
       },
       {
-        src: '/apple-touch-icon.png',
+        src: '/diller.jpg',
         sizes: '180x180',
-        type: 'image/png',
+        type: 'image/jpeg',
       },
     ],
   };

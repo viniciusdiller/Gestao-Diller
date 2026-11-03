@@ -106,24 +106,24 @@ export function Header() {
         >
           <div className="relative">
             {isCasaItauna ? (
-              <div className="w-11 h-11 rounded-full overflow-hidden border-2 border-[#0369a1] shadow-[0_2px_10px_rgba(3,105,161,0.25)] bg-white shrink-0 p-0.5 transition-all duration-300 animate-pop">
+              <div className="w-11 h-11 rounded-2xl overflow-hidden border-2 border-[#0369a1] shadow-2xs bg-white shrink-0 p-0.5 transition-all duration-300 animate-pop">
                 <Image
                   src="/logo-itauna.jpg"
                   alt="Casa Itaúna - Saquarema"
                   width={44}
                   height={44}
-                  className="w-full h-full object-cover rounded-full"
+                  className="w-full h-full object-cover rounded-xl"
                   priority
                 />
               </div>
             ) : (
-              <div className="w-11 h-11 rounded-full overflow-hidden border-2 border-[#977f5a]/40 shadow-[0_2px_8px_rgba(151,127,90,0.18)] bg-white shrink-0 p-0.5 group-hover:border-[#977f5a] transition-all duration-300 animate-pop">
+              <div className="w-11 h-11 rounded-2xl overflow-hidden border-2 border-[#e2e8f0] shadow-2xs bg-white shrink-0 p-0.5 group-hover:border-[#977f5a] transition-all duration-300 animate-pop">
                 <Image
-                  src="/logo.jpg"
-                  alt="Gestão Diller"
+                  src="/diller.jpg"
+                  alt="Diller-Hub"
                   width={44}
                   height={44}
-                  className="w-full h-full object-cover rounded-full"
+                  className="w-full h-full object-cover rounded-xl"
                   priority
                 />
               </div>
@@ -132,12 +132,12 @@ export function Header() {
 
           <div>
             <div className="flex items-center gap-1.5">
-              <h1 className="text-[17px] font-bold tracking-tight text-[var(--foreground)] leading-tight group-hover:text-[var(--primary)] transition-colors">
-                Gestão Diller
+              <h1 className="text-[17px] font-black tracking-tight text-[var(--foreground)] leading-tight group-hover:text-[var(--primary)] transition-colors">
+                Diller-Hub
               </h1>
             </div>
-            <p className="text-[10px] font-bold tracking-[0.20em] text-[var(--primary)] uppercase flex items-center gap-1">
-              {isCasaItauna ? 'Casa Itaúna — Temporada' : 'Semijoias Finas'}
+            <p className="text-[10px] font-bold tracking-[0.16em] text-[var(--primary)] uppercase flex items-center gap-1">
+              {isCasaItauna ? 'Casa Itaúna — Saquarema' : 'Renata Diller — Semijoias'}
             </p>
           </div>
         </div>

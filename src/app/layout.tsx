@@ -3,22 +3,22 @@ import './globals.css';
 import { ToastProvider } from '@/components/ui/toast';
 
 export const metadata: Metadata = {
-  title: 'Renata Diller — Semijoias',
-  description: 'Gestão financeira mobile-first para vendas, clientes e cobranças.',
+  title: 'Diller-Hub — Gestão Integrada',
+  description: 'Hub unificado de gestão financeira e operacional (Semijoias e Casa Itaúna).',
   manifest: '/manifest.webmanifest',
   icons: {
     icon: [
-      { url: '/logo.jpg', type: 'image/jpeg' },
+      { url: '/diller.jpg', type: 'image/jpeg' },
     ],
     apple: [
-      { url: '/apple-touch-icon.png', sizes: '180x180', type: 'image/png' },
+      { url: '/diller.jpg', sizes: '180x180', type: 'image/jpeg' },
     ],
-    shortcut: '/logo.jpg',
+    shortcut: '/diller.jpg',
   },
   appleWebApp: {
     capable: true,
     statusBarStyle: 'default',
-    title: 'Renata Semijoias',
+    title: 'Diller-Hub',
   },
 };
 
@@ -28,7 +28,7 @@ export const viewport: Viewport = {
   maximumScale: 1,
   userScalable: false,
   viewportFit: 'cover',
-  themeColor: '#977f5a',
+  themeColor: '#0f172a',
 };
 
 export default function RootLayout({

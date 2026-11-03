@@ -18,8 +18,8 @@ export function WorkspaceSwitcherModal() {
     <Modal
       isOpen={isModalOpen}
       onClose={() => setIsModalOpen(false)}
-      title="Alternar Gestão"
-      description="Selecione qual negócio você deseja gerenciar agora"
+      title="Diller-Hub — Alternar Negócio"
+      description="Selecione qual operação você deseja gerenciar agora"
     >
       <div className="space-y-3 pt-1">
         {/* Card 1: Renata Diller Semijoias */}

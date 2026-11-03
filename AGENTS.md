@@ -8,17 +8,15 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 <!-- END:nextjs-agent-rules -->
 
-# Renata Diller — Semijoias (Sistema de Gestão Financeira Mobile-First)
+# Diller-Hub (Sistema de Gestão Integrada Multi-Workspace)
 
 ## 1. Visão Geral do Projeto
-Aplicativo web mobile-first desenhado sob medida para celular para o controle financeiro de vendas, histórico de clientes, controle de fiado/parcelamento e cobranças via WhatsApp para **Renata Diller - Semijoias**.
+Hub de gestão unificada de negócios familiares sob a marca **Diller-Hub**, projetado mobile-first para controle operacional e financeiro:
+1. **Renata Diller — Semijoias**: Vendas, clientes, cobranças via WhatsApp e controle de fiado/parcelamento.
+2. **Casa Itaúna — Saquarema**: Controle de reservas de temporada, calendário estilo Airbnb, vacância, comissões de plataformas (Airbnb 16%), despesa de faxina fixa (R$ 180) e comissão local da Dani (20%).
 
-- **Paleta de Cores Oficial**:
-  - Fundo / Base: `#f0e9df` (Neutro elegante / Off-white acolhedor)
-  - Primária / Destaque: `#977f5a` (Dourado sofisticado / Taupe ouro)
-  - Cores auxiliares: Alerta atraso (`#b91c1c`), Alerta atenção (`#d97706`), Sucesso (`#15803d`)
-- **Logo**: `/public/logo.jpg` e `/public/Renata-Logo.jpg`
-- **Operação**: 100% Mobile-first com Bottom Navigation Bar persistente, touch targets amplos (>= 44px), cards no lugar de tabelas e feedback tátil/visual imediato.
+- **Logo Oficial**: `/public/diller.jpg`
+- **Operação**: 100% Mobile-first com seletor fluido de workspaces no Header, Bottom Navigation Bar persistente, touch targets amplos (>= 44px) e feedback tátil/visual imediato.
 
 ---
 

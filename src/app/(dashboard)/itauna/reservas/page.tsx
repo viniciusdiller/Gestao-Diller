@@ -17,6 +17,7 @@ import {
   XCircle,
   Percent,
   Info,
+  Users,
 } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -70,6 +71,7 @@ export default function ItaunaReservasPage() {
   const [hospedeId, setHospedeId] = React.useState('');
   const [checkin, setCheckin] = React.useState('');
   const [checkout, setCheckout] = React.useState('');
+  const [numHospedes, setNumHospedes] = React.useState<number>(2);
   const [valorDiaria, setValorDiaria] = React.useState<number>(600);
   const [taxaLimpeza, setTaxaLimpeza] = React.useState<number>(180);
   const [origem, setOrigem] = React.useState<
@@ -91,6 +93,7 @@ export default function ItaunaReservasPage() {
 
   // Modal Edição
   const [reservaToEdit, setReservaToEdit] = React.useState<Reserva | null>(null);
+  const [editNumHospedes, setEditNumHospedes] = React.useState(2);
   const [editValorDiaria, setEditValorDiaria] = React.useState(0);
   const [editTaxaLimpeza, setEditTaxaLimpeza] = React.useState(180);
   const [editTaxaPlataformaPercentual, setEditTaxaPlataformaPercentual] = React.useState(16);
@@ -265,6 +268,7 @@ export default function ItaunaReservasPage() {
       hospede_id: hospedeId,
       data_checkin: checkin,
       data_checkout: checkout,
+      num_hospedes: Number(numHospedes || 1),
       valor_diaria: Number(valorDiaria),
       taxa_limpeza: Number(taxaLimpeza),
       taxa_plataforma_percentual: Number(taxaPlataformaPercentual),
@@ -294,6 +298,7 @@ export default function ItaunaReservasPage() {
   // Abrir Modal de Edição
   function handleOpenEdit(r: Reserva) {
     setReservaToEdit(r);
+    setEditNumHospedes(Number(r.num_hospedes || 1));
     setEditValorDiaria(Number(r.valor_diaria));
     setEditTaxaLimpeza(r.taxa_limpeza !== undefined ? Number(r.taxa_limpeza) : 180);
     setEditTaxaPlataformaPercentual(
@@ -321,6 +326,7 @@ export default function ItaunaReservasPage() {
 
     const res = await updateReservaAction({
       id: reservaToEdit.id,
+      num_hospedes: Number(editNumHospedes || 1),
       valor_diaria: Number(editValorDiaria),
       taxa_limpeza: Number(editTaxaLimpeza),
       taxa_plataforma_percentual: Number(editTaxaPlataformaPercentual),
@@ -501,7 +507,7 @@ export default function ItaunaReservasPage() {
                           {formatCurrency(Number(reserva.valor_total))}
                         </span>
                         <p className="text-[10px] font-semibold text-[#64748b]">
-                          {reserva.num_diarias} noites
+                          {reserva.num_diarias} noites • {reserva.num_hospedes || 1} hósp.
                         </p>
                       </div>
                     </div>
@@ -691,8 +697,8 @@ export default function ItaunaReservasPage() {
             )}
           </div>
 
-          {/* Datas de Check-in e Check-out */}
-          <div className="grid grid-cols-2 gap-2.5">
+          {/* Datas de Check-in, Check-out e Quantidade de Hóspedes */}
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
             <div className="space-y-1">
               <label className="text-xs font-semibold text-[#0f172a]">Check-in *</label>
               <DatePicker
@@ -709,13 +715,27 @@ export default function ItaunaReservasPage() {
                 placeholder="Data saída..."
               />
             </div>
+            <div className="space-y-1 col-span-2 sm:col-span-1">
+              <label className="text-xs font-semibold text-[#0f172a] flex items-center gap-1">
+                <Users className="w-3.5 h-3.5 text-[#0369a1]" /> Hóspedes *
+              </label>
+              <Input
+                type="number"
+                min="1"
+                step="1"
+                value={numHospedes}
+                onChange={(e) => setNumHospedes(Math.max(1, parseInt(e.target.value, 10) || 1))}
+                placeholder="Ex: 2"
+                className="h-11 bg-white font-bold"
+              />
+            </div>
           </div>
 
           {previewCalc.num_diarias > 0 && (
             <div className="p-2.5 rounded-xl bg-[#f8fafc] border border-[#e2e8f0] text-xs flex justify-between items-center">
-              <span className="text-[#64748b]">Período de locação:</span>
+              <span className="text-[#64748b]">Período e ocupação:</span>
               <strong className="text-[#0369a1] font-bold">
-                {previewCalc.num_diarias} noites
+                {previewCalc.num_diarias} noites • {numHospedes} hóspede{numHospedes > 1 ? 's' : ''}
               </strong>
             </div>
           )}
@@ -923,9 +943,9 @@ export default function ItaunaReservasPage() {
               </div>
             )}
 
-            <div className="grid grid-cols-2 gap-2.5">
+            <div className="grid grid-cols-3 gap-2.5">
               <div className="space-y-1">
-                <label className="text-xs font-semibold text-[#0f172a]">Valor Diária (R$)</label>
+                <label className="text-xs font-semibold text-[#0f172a]">Diária (R$)</label>
                 <Input
                   type="number"
                   step="0.01"
@@ -936,7 +956,7 @@ export default function ItaunaReservasPage() {
                 />
               </div>
               <div className="space-y-1">
-                <label className="text-xs font-semibold text-[#0f172a]">Taxa Faxina (R$)</label>
+                <label className="text-xs font-semibold text-[#0f172a]">Faxina (R$)</label>
                 <Input
                   type="number"
                   step="0.01"
@@ -944,6 +964,19 @@ export default function ItaunaReservasPage() {
                   value={editTaxaLimpeza}
                   onChange={(e) => setEditTaxaLimpeza(parseFloat(e.target.value) || 0)}
                   className="h-11 bg-white font-semibold"
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-xs font-semibold text-[#0f172a] flex items-center gap-1">
+                  <Users className="w-3.5 h-3.5 text-[#0369a1]" /> Hóspedes
+                </label>
+                <Input
+                  type="number"
+                  min="1"
+                  step="1"
+                  value={editNumHospedes}
+                  onChange={(e) => setEditNumHospedes(Math.max(1, parseInt(e.target.value, 10) || 1))}
+                  className="h-11 bg-white font-bold"
                 />
               </div>
             </div>
