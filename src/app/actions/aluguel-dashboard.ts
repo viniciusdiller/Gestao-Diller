@@ -28,6 +28,7 @@ export async function getAluguelDashboardDataAction() {
       hospede_id,
       data_checkin,
       data_checkout,
+      num_hospedes,
       num_diarias,
       valor_diaria,
       taxa_limpeza,
