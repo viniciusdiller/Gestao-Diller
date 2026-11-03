@@ -109,49 +109,53 @@ export default function ItaunaDashboardPage() {
 
       {/* HERO CARD: Status de Vacância (O Coração da Visibilidade) */}
       <div
-        className={`p-4 sm:p-5 rounded-3xl border-2 transition-all duration-300 shadow-md touch-card animate-slide-up ${
+        className={`p-4 sm:p-5 rounded-3xl border transition-all duration-300 shadow-2xs touch-card animate-slide-up ${
           isOccupied
-            ? 'bg-gradient-to-br from-[#fff7ed] via-[#ffedd5] to-[#fed7aa] border-[#f97316]/50'
-            : 'bg-gradient-to-br from-[#f0fdf4] via-[#dcfce7] to-[#bbf7d0] border-[#16a34a]/40'
+            ? 'bg-white border-amber-200'
+            : 'bg-white border-emerald-200'
         }`}
       >
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div className="flex items-center gap-3.5">
             <div
-              className={`w-13 h-13 rounded-2xl flex items-center justify-center text-white shrink-0 shadow-sm ${
-                isOccupied ? 'bg-[#f97316] animate-pulse-subtle' : 'bg-[#16a34a]'
+              className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 shadow-2xs ${
+                isOccupied ? 'bg-amber-100 text-amber-800' : 'bg-emerald-100 text-emerald-800'
               }`}
             >
               {isOccupied ? (
-                <CalendarX className="w-7 h-7 stroke-[2.2]" />
+                <CalendarX className="w-6 h-6 stroke-[2]" />
               ) : (
-                <CalendarCheck className="w-7 h-7 stroke-[2.2]" />
+                <CalendarCheck className="w-6 h-6 stroke-[2]" />
               )}
             </div>
 
             <div>
               <div className="flex items-center gap-2">
-                <span className="text-xs font-bold uppercase tracking-wider text-[#64748b]">
+                <span className="text-[11px] font-semibold uppercase tracking-wider text-[#64748b]">
                   Status de Hoje
                 </span>
                 <span
-                  className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-black uppercase ${
+                  className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold ${
                     isOccupied
-                      ? 'bg-[#f97316] text-white shadow-xs'
-                      : 'bg-[#16a34a] text-white shadow-xs'
+                      ? 'bg-amber-50 text-amber-900 border border-amber-200'
+                      : 'bg-emerald-50 text-emerald-900 border border-emerald-200'
                   }`}
                 >
-                  <span className="w-1.5 h-1.5 rounded-full bg-white animate-ping" />
+                  <span
+                    className={`w-2 h-2 rounded-full ${
+                      isOccupied ? 'bg-amber-600' : 'bg-emerald-600'
+                    }`}
+                  />
                   {isOccupied ? 'Ocupada Hoje' : 'Livre Hoje'}
                 </span>
               </div>
 
               {isOccupied && activeReservation ? (
                 <div className="mt-1">
-                  <h3 className="text-base font-extrabold text-[#0f172a]">
+                  <h3 className="text-sm sm:text-base font-bold text-[#0f172a]">
                     Hóspede: {activeReservation.hospede_nome}
                   </h3>
-                  <p className="text-xs text-[#475569] font-medium">
+                  <p className="text-xs text-[#64748b] font-medium">
                     Check-out em{' '}
                     <strong className="text-[#0f172a]">
                       {formatDateBR(activeReservation.data_checkout)}
@@ -159,7 +163,7 @@ export default function ItaunaDashboardPage() {
                   </p>
                 </div>
               ) : (
-                <p className="text-xs sm:text-sm font-semibold text-[#166534] mt-0.5">
+                <p className="text-xs sm:text-sm font-medium text-emerald-800 mt-0.5">
                   A casa está livre e pronta para locação imediata.
                 </p>
               )}
@@ -172,15 +176,15 @@ export default function ItaunaDashboardPage() {
                 href={activeWaUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-xl bg-[#25D366] text-white text-xs font-bold active:scale-95 transition-all shadow-xs"
+                className="flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-xl bg-[#25D366] text-white text-xs font-semibold active:scale-95 transition-all shadow-2xs"
               >
                 <MessageCircle className="w-4 h-4" />
-                Falar com Hóspede
+                Falar no WhatsApp
               </a>
             )}
             <Link
               href="/itauna/calendario"
-              className="flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-xl bg-white/80 hover:bg-white text-[#0369a1] border border-[#cbd5e1] text-xs font-bold active:scale-95 transition-all shadow-2xs"
+              className="flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-xl bg-white hover:bg-[#f8fafc] text-[#0369a1] border border-[#e2e8f0] text-xs font-semibold active:scale-95 transition-all shadow-2xs"
             >
               <CalendarDays className="w-4 h-4" />
               Ver Calendário
@@ -192,12 +196,12 @@ export default function ItaunaDashboardPage() {
       {/* Grid de KPIs Financeiros (3 Cards de Alto Destaque) */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
         {/* KPI 1: Faturamento Bruto */}
-        <Card className="p-4 bg-white border-[#cbd5e1] shadow-xs touch-card animate-slide-up stagger-1">
+        <Card className="p-4 bg-white border-[#e2e8f0] shadow-2xs touch-card animate-slide-up stagger-1">
           <div className="flex items-center justify-between pb-1">
             <span className="text-xs font-semibold text-[#64748b]">
               Faturamento Bruto
             </span>
-            <div className="p-1.5 rounded-xl bg-[#0369a1]/10 text-[#0369a1]">
+            <div className="p-1.5 rounded-xl bg-[#f0f9ff] text-[#0369a1]">
               <DollarSign className="w-4 h-4" />
             </div>
           </div>
@@ -210,16 +214,16 @@ export default function ItaunaDashboardPage() {
         </Card>
 
         {/* KPI 2: Total de Despesas do Mês */}
-        <Card className="p-4 bg-white border-[#cbd5e1] shadow-xs touch-card animate-slide-up stagger-2">
+        <Card className="p-4 bg-white border-[#e2e8f0] shadow-2xs touch-card animate-slide-up stagger-2">
           <div className="flex items-center justify-between pb-1">
             <span className="text-xs font-semibold text-[#64748b]">
               Despesas Operacionais
             </span>
-            <div className="p-1.5 rounded-xl bg-[#ef4444]/10 text-[#ef4444]">
+            <div className="p-1.5 rounded-xl bg-rose-50 text-rose-600">
               <Receipt className="w-4 h-4" />
             </div>
           </div>
-          <div className="text-2xl font-black text-[#ef4444] tracking-tight mt-1">
+          <div className="text-2xl font-black text-rose-600 tracking-tight mt-1">
             {formatCurrency(metrics?.totalDespesas || 0)}
           </div>
           <p className="text-[11px] text-[#64748b] mt-0.5">
@@ -228,7 +232,7 @@ export default function ItaunaDashboardPage() {
         </Card>
 
         {/* KPI 3: Lucro Líquido Real (Destaque Principal) */}
-        <Card className="p-4 bg-gradient-to-br from-[#f8fafc] to-[#f0f9ff] border-2 border-[#0369a1]/30 shadow-xs touch-card animate-slide-up stagger-3">
+        <Card className="p-4 bg-[#f0f9ff]/70 border border-[#bae6fd] shadow-2xs touch-card animate-slide-up stagger-3">
           <div className="flex items-center justify-between pb-1">
             <span className="text-xs font-bold text-[#0369a1]">
               Lucro Líquido Real
@@ -241,7 +245,7 @@ export default function ItaunaDashboardPage() {
             {formatCurrency(metrics?.lucroLiquidoReal || 0)}
           </div>
           <p className="text-[11px] text-[#64748b] mt-0.5">
-            Após taxas de plataformas e custos
+            Após taxas de plataformas, faxina e comissões
           </p>
         </Card>
       </div>
@@ -344,3 +348,4 @@ export default function ItaunaDashboardPage() {
     </div>
   );
 }
+

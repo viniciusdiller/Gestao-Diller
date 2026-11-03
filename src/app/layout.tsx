@@ -37,8 +37,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="pt-BR" className="h-full bg-[#f0e9df]">
-      <body className="min-h-full flex flex-col bg-[#f0e9df] text-[#2d251e] antialiased select-none font-sans">
+    <html lang="pt-BR" className="h-full">
+      <body className="min-h-full flex flex-col bg-[var(--background)] text-[var(--foreground)] antialiased select-none font-sans transition-colors duration-300">
         <ToastProvider>{children}</ToastProvider>
       </body>
     </html>

@@ -10,7 +10,7 @@ import {
   Zap,
   Droplets,
   Wifi,
-  Sparkles,
+  Brush,
   Wrench,
   Hammer,
   HelpCircle,
@@ -30,7 +30,7 @@ import {
   updateDespesaAction,
   deleteDespesaAction,
 } from '@/app/actions/aluguel-despesas';
-import { formatCurrency, formatDateBR } from '@/lib/utils';
+import { formatCurrency, formatDateBR, getTodayDateString } from '@/lib/utils';
 import { AluguelCategoriaDespesa } from '@/lib/validations/aluguel';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -40,7 +40,7 @@ const categoryLabels: Record<string, { label: string; icon: any; color: string }
   energia: { label: 'Energia / Luz', icon: Zap, color: 'text-amber-500 bg-amber-50 border-amber-200' },
   agua: { label: 'Água', icon: Droplets, color: 'text-blue-500 bg-blue-50 border-blue-200' },
   internet: { label: 'Internet', icon: Wifi, color: 'text-indigo-500 bg-indigo-50 border-indigo-200' },
-  faxina: { label: 'Faxina Manutenção', icon: Sparkles, color: 'text-emerald-500 bg-emerald-50 border-emerald-200' },
+  faxina: { label: 'Faxina e Higienização', icon: Brush, color: 'text-emerald-600 bg-emerald-50 border-emerald-200' },
   manutencao: { label: 'Manutenção', icon: Wrench, color: 'text-slate-600 bg-slate-50 border-slate-200' },
   reparos: { label: 'Reparos e Consertos', icon: Hammer, color: 'text-rose-500 bg-rose-50 border-rose-200' },
   outros: { label: 'Outros Custos', icon: HelpCircle, color: 'text-neutral-500 bg-neutral-50 border-neutral-200' },
@@ -57,7 +57,7 @@ export default function ItaunaDespesasPage() {
   const [categoria, setCategoria] = React.useState<AluguelCategoriaDespesa>('energia');
   const [descricao, setDescricao] = React.useState('');
   const [valor, setValor] = React.useState<number>(0);
-  const [dataDespesa, setDataDespesa] = React.useState(() => new Date().toISOString().slice(0, 10));
+  const [dataDespesa, setDataDespesa] = React.useState(() => getTodayDateString());
   const [submitting, setSubmitting] = React.useState(false);
   const [formError, setFormError] = React.useState<string | null>(null);
 
@@ -560,3 +560,4 @@ export default function ItaunaDespesasPage() {
     </div>
   );
 }
+

@@ -476,3 +476,4 @@ export default function ItaunaHospedesPage() {
     </div>
   );
 }
+

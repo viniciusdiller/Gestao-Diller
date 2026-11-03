@@ -1,6 +1,7 @@
 'use client';
 
 import * as React from 'react';
+import { useSearchParams } from 'next/navigation';
 import {
   CalendarDays,
   PlusCircle,
@@ -14,6 +15,8 @@ import {
   CheckCircle2,
   Clock,
   XCircle,
+  Percent,
+  Info,
 } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -37,7 +40,10 @@ import {
   formatDateBR,
   sanitizePhoneForWhatsApp,
 } from '@/lib/utils';
-import { calculateNights } from '@/lib/services/aluguel-calculator';
+import {
+  calculateNights,
+  calculateReservaTotals,
+} from '@/lib/services/aluguel-calculator';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Reserva = any;
@@ -46,6 +52,7 @@ type Hospede = any;
 
 export default function ItaunaReservasPage() {
   const { showToast } = useToast();
+  const searchParams = useSearchParams();
   const [loading, setLoading] = React.useState(true);
   const [reservas, setReservas] = React.useState<Reserva[]>([]);
   const [hospedes, setHospedes] = React.useState<Hospede[]>([]);
@@ -64,10 +71,16 @@ export default function ItaunaReservasPage() {
   const [checkin, setCheckin] = React.useState('');
   const [checkout, setCheckout] = React.useState('');
   const [valorDiaria, setValorDiaria] = React.useState<number>(600);
-  const [taxaLimpeza, setTaxaLimpeza] = React.useState<number>(200);
-  const [taxaPlataforma, setTaxaPlataforma] = React.useState<number>(0);
-  const [origem, setOrigem] = React.useState<'airbnb' | 'booking' | 'instagram' | 'direto' | 'outros'>('direto');
-  const [statusPagamento, setStatusPagamento] = React.useState<'pendente' | 'parcial' | 'pago'>('pendente');
+  const [taxaLimpeza, setTaxaLimpeza] = React.useState<number>(180);
+  const [origem, setOrigem] = React.useState<
+    'airbnb' | 'booking' | 'instagram' | 'direto' | 'outros'
+  >('airbnb');
+  const [taxaPlataformaPercentual, setTaxaPlataformaPercentual] = React.useState<number>(16);
+  const [temComissaoDani, setTemComissaoDani] = React.useState<boolean>(true);
+  const [taxaDaniPercentual, setTaxaDaniPercentual] = React.useState<number>(20);
+  const [statusPagamento, setStatusPagamento] = React.useState<
+    'pendente' | 'parcial' | 'pago'
+  >('pendente');
   const [observacoes, setObservacoes] = React.useState('');
 
   // Cadastro rápido inline de hóspede
@@ -79,8 +92,10 @@ export default function ItaunaReservasPage() {
   // Modal Edição
   const [reservaToEdit, setReservaToEdit] = React.useState<Reserva | null>(null);
   const [editValorDiaria, setEditValorDiaria] = React.useState(0);
-  const [editTaxaLimpeza, setEditTaxaLimpeza] = React.useState(0);
-  const [editTaxaPlataforma, setEditTaxaPlataforma] = React.useState(0);
+  const [editTaxaLimpeza, setEditTaxaLimpeza] = React.useState(180);
+  const [editTaxaPlataformaPercentual, setEditTaxaPlataformaPercentual] = React.useState(16);
+  const [editTemComissaoDani, setEditTemComissaoDani] = React.useState(true);
+  const [editTaxaDaniPercentual, setEditTaxaDaniPercentual] = React.useState(20);
   const [editStatus, setEditStatus] = React.useState('confirmada');
   const [editStatusPagamento, setEditStatusPagamento] = React.useState('pendente');
   const [editObservacoes, setEditObservacoes] = React.useState('');
@@ -95,6 +110,7 @@ export default function ItaunaReservasPage() {
   const [currentPage, setCurrentPage] = React.useState(1);
   const pageSize = 6;
 
+  // Carrega dados iniciais
   const loadData = React.useCallback(async () => {
     setLoading(true);
     try {
@@ -123,6 +139,33 @@ export default function ItaunaReservasPage() {
     loadData();
   }, [loadData]);
 
+  // Se veio parâmetro de check-in na URL (ex: do calendário), abre modal automaticamente
+  React.useEffect(() => {
+    const checkinParam = searchParams.get('checkin');
+    if (checkinParam) {
+      setCheckin(checkinParam);
+      setIsNewModalOpen(true);
+    }
+  }, [searchParams]);
+
+  // Ajusta automaticamente as taxas padrão ao mudar de origem
+  function handleOrigemChange(newOrigem: 'airbnb' | 'booking' | 'instagram' | 'direto' | 'outros') {
+    setOrigem(newOrigem);
+    if (newOrigem === 'airbnb') {
+      setTaxaPlataformaPercentual(16);
+      setTemComissaoDani(true);
+      setTaxaDaniPercentual(20);
+    } else if (newOrigem === 'booking') {
+      setTaxaPlataformaPercentual(15);
+      setTemComissaoDani(true);
+      setTaxaDaniPercentual(20);
+    } else {
+      // Direto / WhatsApp / Instagram
+      setTaxaPlataformaPercentual(0);
+      // Mantém Dani como opção caso façam check-in avulso
+    }
+  }
+
   // Opções para Combobox de Hóspedes
   const hospedeOptions = React.useMemo(() => {
     return hospedes.map((h) => ({
@@ -132,16 +175,49 @@ export default function ItaunaReservasPage() {
     }));
   }, [hospedes]);
 
-  // Cálculo prévio de noites e total em tempo real
-  const previewNights = React.useMemo(() => {
-    return calculateNights(checkin, checkout);
-  }, [checkin, checkout]);
+  // Cálculo prévio em tempo real dos valores da nova reserva
+  const previewCalc = React.useMemo(() => {
+    return calculateReservaTotals({
+      checkin,
+      checkout,
+      valorDiaria,
+      taxaLimpeza,
+      taxaPlataformaPercentual,
+      temComissaoDani,
+      taxaDaniPercentual,
+    });
+  }, [
+    checkin,
+    checkout,
+    valorDiaria,
+    taxaLimpeza,
+    taxaPlataformaPercentual,
+    temComissaoDani,
+    taxaDaniPercentual,
+  ]);
 
-  const previewTotal = React.useMemo(() => {
-    return (previewNights * (valorDiaria || 0)) + (taxaLimpeza || 0);
-  }, [previewNights, valorDiaria, taxaLimpeza]);
+  // Cálculo prévio em tempo real para a edição de reserva
+  const editPreviewCalc = React.useMemo(() => {
+    if (!reservaToEdit) return null;
+    return calculateReservaTotals({
+      checkin: reservaToEdit.data_checkin,
+      checkout: reservaToEdit.data_checkout,
+      valorDiaria: editValorDiaria,
+      taxaLimpeza: editTaxaLimpeza,
+      taxaPlataformaPercentual: editTaxaPlataformaPercentual,
+      temComissaoDani: editTemComissaoDani,
+      taxaDaniPercentual: editTaxaDaniPercentual,
+    });
+  }, [
+    reservaToEdit,
+    editValorDiaria,
+    editTaxaLimpeza,
+    editTaxaPlataformaPercentual,
+    editTemComissaoDani,
+    editTaxaDaniPercentual,
+  ]);
 
-  // Cadastro rápido de Hóspede
+  // Cadastro rápido de Hóspede inline
   async function handleSaveQuickHospede() {
     if (!quickNome.trim() || quickNome.trim().length < 2) {
       showToast('Nome do hóspede deve ter pelo menos 2 caracteres.', 'error');
@@ -191,11 +267,13 @@ export default function ItaunaReservasPage() {
       data_checkout: checkout,
       valor_diaria: Number(valorDiaria),
       taxa_limpeza: Number(taxaLimpeza),
-      taxa_plataforma: Number(taxaPlataforma),
+      taxa_plataforma_percentual: Number(taxaPlataformaPercentual),
+      tem_comissao_dani: Boolean(temComissaoDani),
+      taxa_dani_percentual: Number(taxaDaniPercentual),
       origem,
       status: 'confirmada',
       status_pagamento: statusPagamento,
-      valor_pago: statusPagamento === 'pago' ? previewTotal : 0,
+      valor_pago: statusPagamento === 'pago' ? previewCalc.valor_total : 0,
       observacoes: observacoes || null,
     });
 
@@ -213,12 +291,20 @@ export default function ItaunaReservasPage() {
     setSubmitting(false);
   }
 
-  // Abrir Edição
+  // Abrir Modal de Edição
   function handleOpenEdit(r: Reserva) {
     setReservaToEdit(r);
     setEditValorDiaria(Number(r.valor_diaria));
-    setEditTaxaLimpeza(Number(r.taxa_limpeza));
-    setEditTaxaPlataforma(Number(r.taxa_plataforma));
+    setEditTaxaLimpeza(r.taxa_limpeza !== undefined ? Number(r.taxa_limpeza) : 180);
+    setEditTaxaPlataformaPercentual(
+      r.taxa_plataforma_percentual !== undefined
+        ? Number(r.taxa_plataforma_percentual)
+        : r.origem === 'airbnb'
+        ? 16
+        : 0
+    );
+    setEditTemComissaoDani(Boolean(r.tem_comissao_dani ?? (r.origem === 'airbnb')));
+    setEditTaxaDaniPercentual(Number(r.taxa_dani_percentual ?? 20));
     setEditStatus(r.status);
     setEditStatusPagamento(r.status_pagamento);
     setEditObservacoes(r.observacoes || '');
@@ -237,7 +323,9 @@ export default function ItaunaReservasPage() {
       id: reservaToEdit.id,
       valor_diaria: Number(editValorDiaria),
       taxa_limpeza: Number(editTaxaLimpeza),
-      taxa_plataforma: Number(editTaxaPlataforma),
+      taxa_plataforma_percentual: Number(editTaxaPlataformaPercentual),
+      tem_comissao_dani: Boolean(editTemComissaoDani),
+      taxa_dani_percentual: Number(editTaxaDaniPercentual),
       status: editStatus as any,
       status_pagamento: editStatusPagamento as any,
       observacoes: editObservacoes || null,
@@ -245,7 +333,7 @@ export default function ItaunaReservasPage() {
 
     if (res.success) {
       setReservaToEdit(null);
-      showToast('Reserva atualizada com sucesso.');
+      showToast('Reserva atualizada com sucesso!');
       loadData();
     } else {
       setEditError(res.error || 'Erro ao atualizar reserva.');
@@ -253,15 +341,14 @@ export default function ItaunaReservasPage() {
     setSavingEdit(false);
   }
 
-  // Excluir
-  async function handleConfirmDelete() {
+  // Excluir Reserva
+  async function handleDeleteReserva() {
     if (!reservaToDelete) return;
     setDeleting(true);
-
     const res = await deleteReservaAction(reservaToDelete.id);
     if (res.success) {
       setReservaToDelete(null);
-      showToast('Reserva excluída.');
+      showToast('Reserva excluída com sucesso.');
       loadData();
     } else {
       showToast(res.error || 'Erro ao excluir reserva.', 'error');
@@ -272,81 +359,101 @@ export default function ItaunaReservasPage() {
   // Filtros aplicados
   const filteredReservas = React.useMemo(() => {
     return reservas.filter((r) => {
-      const matchStatus = statusFilter === 'all' || r.status === statusFilter;
-      const matchOrigem = origemFilter === 'all' || r.origem === origemFilter;
-      return matchStatus && matchOrigem;
+      if (statusFilter !== 'all' && r.status !== statusFilter) return false;
+      if (origemFilter !== 'all' && r.origem !== origemFilter) return false;
+      return true;
     });
   }, [reservas, statusFilter, origemFilter]);
 
+  // Paginação
   const totalPages = Math.ceil(filteredReservas.length / pageSize) || 1;
-  const paginatedReservas = filteredReservas.slice(
-    (currentPage - 1) * pageSize,
-    currentPage * pageSize
-  );
+  const paginatedReservas = React.useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    return filteredReservas.slice(start, start + pageSize);
+  }, [filteredReservas, currentPage, pageSize]);
 
   return (
     <div className="space-y-4 animate-in fade-in duration-300">
-      {/* Header */}
-      <div className="pt-1 flex items-center justify-between">
+      {/* Topo: Título e Botão Nova Reserva */}
+      <div className="flex items-center justify-between gap-2 pt-1">
         <div>
           <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-[#0f172a] flex items-center gap-2">
             <KeyRound className="w-6 h-6 text-[#0369a1]" /> Reservas da Casa
           </h2>
           <p className="text-xs sm:text-sm text-[#64748b]">
-            {filteredReservas.length} reserva(s) registradas
+            Controle de diárias, comissões e lucro líquido da Casa Itaúna
           </p>
         </div>
 
         <Button
-          onClick={() => setIsNewModalOpen(true)}
-          size="sm"
-          className="bg-[#0369a1] hover:bg-[#0284c7] text-white shadow-xs gap-1.5 text-xs font-bold"
+          onClick={() => {
+            setFormError(null);
+            setIsNewModalOpen(true);
+          }}
+          className="bg-[#0369a1] hover:bg-[#0284c7] text-white font-semibold text-xs sm:text-sm shadow-2xs h-10 px-4 rounded-xl active:scale-95 transition-all"
         >
-          <PlusCircle className="w-4 h-4" /> Nova Reserva
+          <PlusCircle className="w-4 h-4 mr-1.5" /> Nova Reserva
         </Button>
       </div>
 
-      {/* Filtros de Status e Origem */}
-      <div className="flex gap-1.5 overflow-x-auto pb-1 no-scrollbar text-xs">
-        {[
-          ['all', 'Todas'],
-          ['confirmada', 'Confirmadas'],
-          ['em_andamento', 'Em Andamento'],
-          ['concluida', 'Concluídas'],
-          ['cancelada', 'Canceladas'],
-        ].map(([val, label]) => (
-          <button
-            key={val}
-            onClick={() => setStatusFilter(val)}
-            className={`px-3 py-1.5 rounded-xl font-bold touch-pill transition-all shrink-0 ${
-              statusFilter === val
-                ? 'bg-[#0369a1] text-white shadow-xs'
-                : 'bg-white text-[#64748b] border border-[#cbd5e1]'
-            }`}
-          >
-            {label}
-          </button>
-        ))}
+      {/* Barra de Filtros */}
+      <div className="flex flex-wrap items-center gap-2 p-2 bg-white rounded-2xl border border-[#e2e8f0] shadow-2xs">
+        <div className="flex items-center gap-1 text-xs text-[#64748b] font-medium pl-2">
+          <Filter className="w-3.5 h-3.5" />
+          <span>Filtrar:</span>
+        </div>
+
+        <select
+          value={statusFilter}
+          onChange={(e) => {
+            setStatusFilter(e.target.value);
+            setCurrentPage(1);
+          }}
+          className="h-9 rounded-xl border border-[#e2e8f0] bg-white px-2.5 text-xs font-semibold text-[#0f172a] focus:outline-none focus:ring-1 focus:ring-[#0369a1]"
+        >
+          <option value="all">Todos os Status</option>
+          <option value="confirmada">Confirmada</option>
+          <option value="em_andamento">Em Andamento</option>
+          <option value="concluida">Concluída</option>
+          <option value="cancelada">Cancelada</option>
+        </select>
+
+        <select
+          value={origemFilter}
+          onChange={(e) => {
+            setOrigemFilter(e.target.value);
+            setCurrentPage(1);
+          }}
+          className="h-9 rounded-xl border border-[#e2e8f0] bg-white px-2.5 text-xs font-semibold text-[#0f172a] focus:outline-none focus:ring-1 focus:ring-[#0369a1]"
+        >
+          <option value="all">Todas as Origens</option>
+          <option value="airbnb">Airbnb</option>
+          <option value="booking">Booking.com</option>
+          <option value="direto">Direto / WhatsApp</option>
+          <option value="instagram">Instagram</option>
+          <option value="outros">Outros</option>
+        </select>
+
+        <div className="ml-auto pr-2 text-xs text-[#64748b]">
+          Total: <strong className="text-[#0f172a]">{filteredReservas.length}</strong>
+        </div>
       </div>
 
-      {/* Lista de Reservas */}
+      {/* Lista de Reservas ou Estado Vazio */}
       {loading ? (
-        <LoadingState message="Carregando reservas da Casa Itaúna..." />
+        <LoadingState message="Carregando reservas..." />
       ) : filteredReservas.length === 0 ? (
-        <div className="py-12 text-center space-y-3">
-          <div className="w-12 h-12 mx-auto rounded-full bg-[#0369a1]/10 flex items-center justify-center text-[#0369a1]">
-            <KeyRound className="w-6 h-6" />
-          </div>
-          <p className="text-sm font-medium text-[#0f172a]">
-            Nenhuma reserva encontrada para este filtro.
+        <div className="text-center py-12 px-4 rounded-3xl bg-white border border-[#e2e8f0] shadow-2xs space-y-3">
+          <CalendarDays className="w-10 h-10 text-[#0369a1] mx-auto opacity-70" />
+          <h3 className="text-base font-bold text-[#0f172a]">Nenhuma reserva encontrada</h3>
+          <p className="text-xs text-[#64748b] max-w-sm mx-auto">
+            Cadastre a primeira reserva da Casa Itaúna para controlar disponibilidade e lucros.
           </p>
           <Button
             onClick={() => setIsNewModalOpen(true)}
-            variant="outline"
-            size="sm"
-            className="text-xs border-[#0369a1] text-[#0369a1]"
+            className="bg-[#0369a1] text-white hover:bg-[#0284c7] font-semibold text-xs"
           >
-            Cadastrar Primeira Reserva
+            Cadastrar Reserva Agora
           </Button>
         </div>
       ) : (
@@ -355,13 +462,12 @@ export default function ItaunaReservasPage() {
             {paginatedReservas.map((reserva, idx) => {
               const phone = sanitizePhoneForWhatsApp(reserva.aluguel_hospedes?.telefone || '');
               const waUrl = phone ? `https://wa.me/${phone}` : null;
-              const isPaid = reserva.status_pagamento === 'pago';
 
               return (
                 <Card
                   key={reserva.id}
                   style={{ animationDelay: `${Math.min(idx * 30, 150)}ms` }}
-                  className="p-4 bg-white border-[#cbd5e1] shadow-xs hover:border-[#0369a1] hover:shadow-md hover:-translate-y-0.5 touch-card animate-slide-up transition-all duration-200 flex flex-col justify-between"
+                  className="p-4 bg-white border-[#e2e8f0] shadow-2xs hover:border-[#38bdf8] hover:shadow-xs transition-all duration-200 flex flex-col justify-between"
                 >
                   <div>
                     {/* Topo do Card: Hóspede e Badges */}
@@ -372,14 +478,14 @@ export default function ItaunaReservasPage() {
                             {reserva.aluguel_hospedes?.nome || 'Hóspede'}
                           </h3>
                           <Badge
-                            className={`text-[9px] uppercase font-black px-1.5 py-0 ${
+                            className={`text-[9px] uppercase font-bold px-1.5 py-0 ${
                               reserva.status === 'confirmada'
-                                ? 'bg-emerald-100 text-emerald-800 border-emerald-300'
+                                ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
                                 : reserva.status === 'em_andamento'
-                                ? 'bg-blue-100 text-blue-800 border-blue-300'
+                                ? 'bg-sky-50 text-sky-800 border-sky-200'
                                 : reserva.status === 'cancelada'
-                                ? 'bg-red-100 text-red-800 border-red-300'
-                                : 'bg-gray-100 text-gray-800 border-gray-300'
+                                ? 'bg-rose-50 text-rose-800 border-rose-200'
+                                : 'bg-slate-100 text-slate-800 border-slate-200'
                             }`}
                           >
                             {reserva.status}
@@ -391,7 +497,7 @@ export default function ItaunaReservasPage() {
                       </div>
 
                       <div className="text-right shrink-0">
-                        <span className="text-base font-black text-[#0369a1]">
+                        <span className="text-base font-extrabold text-[#0369a1]">
                           {formatCurrency(Number(reserva.valor_total))}
                         </span>
                         <p className="text-[10px] font-semibold text-[#64748b]">
@@ -416,22 +522,49 @@ export default function ItaunaReservasPage() {
                       </div>
                     </div>
 
-                    {/* Detalhes Financeiros da Diária */}
-                    <div className="text-[11px] text-[#64748b] space-y-0.5 pt-1">
+                    {/* Breakdown Financeiro */}
+                    <div className="text-[11px] text-[#64748b] space-y-1 pt-1 border-t border-[#f1f5f9]">
                       <div className="flex justify-between">
-                        <span>Diária:</span>
-                        <span className="font-bold text-[#0f172a]">{formatCurrency(Number(reserva.valor_diaria))}</span>
+                        <span>Diária x Noites:</span>
+                        <span className="font-medium text-[#0f172a]">
+                          {reserva.num_diarias} x {formatCurrency(Number(reserva.valor_diaria))}
+                        </span>
                       </div>
                       <div className="flex justify-between">
-                        <span>Taxa de Limpeza:</span>
-                        <span className="font-semibold text-[#0f172a]">{formatCurrency(Number(reserva.taxa_limpeza))}</span>
+                        <span>Taxa de Faxina:</span>
+                        <span className="font-medium text-[#0f172a]">
+                          {formatCurrency(Number(reserva.taxa_limpeza || 180))}
+                        </span>
                       </div>
                       {Number(reserva.taxa_plataforma) > 0 && (
-                        <div className="flex justify-between text-[#ef4444]">
-                          <span>Comissão Plataforma:</span>
-                          <span className="font-semibold">- {formatCurrency(Number(reserva.taxa_plataforma))}</span>
+                        <div className="flex justify-between text-rose-600">
+                          <span>
+                            (-) Taxa {reserva.origem.toUpperCase()} ({reserva.taxa_plataforma_percentual || 16}%):
+                          </span>
+                          <span className="font-medium">
+                            - {formatCurrency(Number(reserva.taxa_plataforma))}
+                          </span>
                         </div>
                       )}
+                      {reserva.tem_comissao_dani && (
+                        <div className="flex justify-between text-amber-700">
+                          <span>(-) Dani ({reserva.taxa_dani_percentual || 20}% restante):</span>
+                          <span className="font-medium">
+                            - {formatCurrency(Number(reserva.valor_comissao_dani || 0))}
+                          </span>
+                        </div>
+                      )}
+                      <div className="pt-1 border-t border-[#e2e8f0] flex justify-between font-bold text-[#0369a1]">
+                        <span>Lucro Líquido Real:</span>
+                        <span>
+                          {formatCurrency(
+                            Number(
+                              reserva.lucro_liquido_real ??
+                                (reserva.valor_total - (reserva.taxa_plataforma || 0))
+                            )
+                          )}
+                        </span>
+                      </div>
                     </div>
                   </div>
 
@@ -443,7 +576,7 @@ export default function ItaunaReservasPage() {
                           href={waUrl}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-[#25D366] text-white text-xs font-bold active:scale-90 transition-transform shadow-2xs"
+                          className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-[#25D366] text-white text-xs font-semibold active:scale-95 transition-transform shadow-2xs"
                         >
                           <MessageCircle className="w-3.5 h-3.5" /> WhatsApp
                         </a>
@@ -466,7 +599,7 @@ export default function ItaunaReservasPage() {
                       <button
                         type="button"
                         onClick={() => setReservaToDelete(reserva)}
-                        className="p-1.5 rounded-lg text-red-500 hover:text-red-700 hover:bg-red-50 transition-colors"
+                        className="p-1.5 rounded-lg text-rose-500 hover:text-rose-700 hover:bg-rose-50 transition-colors"
                         title="Excluir reserva"
                       >
                         <Trash2 className="w-4 h-4" />
@@ -497,11 +630,11 @@ export default function ItaunaReservasPage() {
           setShowQuickHospede(false);
         }}
         title="Registrar Nova Reserva"
-        description="Defina as datas e a tarifa dinâmica da Casa Itaúna"
+        description="Defina as datas, comissões e taxas da Casa Itaúna"
       >
         <form onSubmit={handleCreateReserva} className="space-y-3.5">
           {formError && (
-            <div className="p-3 text-xs rounded-xl bg-red-50 border border-red-200 text-red-700">
+            <div className="p-3 text-xs rounded-xl bg-rose-50 border border-rose-200 text-rose-700">
               {formError}
             </div>
           )}
@@ -541,7 +674,7 @@ export default function ItaunaReservasPage() {
                   onClick={handleSaveQuickHospede}
                   isLoading={savingQuickHospede}
                   size="sm"
-                  className="w-full bg-[#0369a1] text-white text-xs font-bold"
+                  className="w-full bg-[#0369a1] text-white text-xs font-semibold"
                 >
                   Salvar e Selecionar Hóspede
                 </Button>
@@ -558,7 +691,7 @@ export default function ItaunaReservasPage() {
             )}
           </div>
 
-          {/* Datas de Check-in e Check-out com DatePicker ShadCN */}
+          {/* Datas de Check-in e Check-out */}
           <div className="grid grid-cols-2 gap-2.5">
             <div className="space-y-1">
               <label className="text-xs font-semibold text-[#0f172a]">Check-in *</label>
@@ -578,14 +711,16 @@ export default function ItaunaReservasPage() {
             </div>
           </div>
 
-          {previewNights > 0 && (
-            <div className="p-2.5 rounded-xl bg-[#f8fafc] border border-[#cbd5e1] text-xs flex justify-between items-center">
-              <span className="text-[#64748b]">Período selecionado:</span>
-              <strong className="text-[#0369a1] font-bold">{previewNights} noites</strong>
+          {previewCalc.num_diarias > 0 && (
+            <div className="p-2.5 rounded-xl bg-[#f8fafc] border border-[#e2e8f0] text-xs flex justify-between items-center">
+              <span className="text-[#64748b]">Período de locação:</span>
+              <strong className="text-[#0369a1] font-bold">
+                {previewCalc.num_diarias} noites
+              </strong>
             </div>
           )}
 
-          {/* Tarifa Dinâmica por Noite */}
+          {/* Tarifa Dinâmica e Taxa de Faxina */}
           <div className="grid grid-cols-2 gap-2.5">
             <div className="space-y-1">
               <label className="text-xs font-semibold text-[#0f172a]">
@@ -597,14 +732,14 @@ export default function ItaunaReservasPage() {
                 min="0"
                 value={valorDiaria}
                 onChange={(e) => setValorDiaria(parseFloat(e.target.value) || 0)}
-                placeholder="Ex: 650.00"
+                placeholder="Ex: 600.00"
                 className="h-11 bg-white font-bold"
               />
             </div>
 
             <div className="space-y-1">
               <label className="text-xs font-semibold text-[#0f172a]">
-                Taxa de Limpeza (R$)
+                Taxa de Faxina (R$) *
               </label>
               <Input
                 type="number"
@@ -612,56 +747,143 @@ export default function ItaunaReservasPage() {
                 min="0"
                 value={taxaLimpeza}
                 onChange={(e) => setTaxaLimpeza(parseFloat(e.target.value) || 0)}
-                placeholder="Ex: 200.00"
-                className="h-11 bg-white"
+                placeholder="Ex: 180.00"
+                className="h-11 bg-white font-semibold"
               />
             </div>
           </div>
 
-          {/* Origem da Reserva e Taxa de Plataforma */}
+          {/* Origem da Reserva e Comissão Plataforma em % */}
           <div className="grid grid-cols-2 gap-2.5">
             <div className="space-y-1">
               <label className="text-xs font-semibold text-[#0f172a]">Origem / Canal</label>
               <select
                 value={origem}
-                onChange={(e) => setOrigem(e.target.value as any)}
-                className="w-full h-11 rounded-xl border border-[#cbd5e1] bg-white px-3 text-xs font-semibold text-[#0f172a]"
+                onChange={(e) =>
+                  handleOrigemChange(
+                    e.target.value as 'airbnb' | 'booking' | 'instagram' | 'direto' | 'outros'
+                  )
+                }
+                className="w-full h-11 rounded-xl border border-[#e2e8f0] bg-white px-3 text-xs font-semibold text-[#0f172a]"
               >
-                <option value="direto">Direto / WhatsApp</option>
-                <option value="airbnb">Airbnb</option>
-                <option value="booking">Booking.com</option>
-                <option value="instagram">Instagram</option>
+                <option value="airbnb">Airbnb (16%)</option>
+                <option value="booking">Booking.com (15%)</option>
+                <option value="direto">Direto / WhatsApp (0%)</option>
+                <option value="instagram">Instagram (0%)</option>
                 <option value="outros">Outros</option>
               </select>
             </div>
 
             <div className="space-y-1">
-              <label className="text-xs font-semibold text-[#0f172a]">
-                Comissão Plataforma (R$)
+              <label className="text-xs font-semibold text-[#0f172a] flex items-center justify-between">
+                <span>Taxa Plataforma (%)</span>
+                <span className="text-[10px] text-rose-600 font-bold">
+                  {formatCurrency(previewCalc.taxa_plataforma)}
+                </span>
               </label>
               <Input
                 type="number"
-                step="0.01"
+                step="0.5"
                 min="0"
-                value={taxaPlataforma}
-                onChange={(e) => setTaxaPlataforma(parseFloat(e.target.value) || 0)}
-                placeholder="Ex: 350.00"
-                className="h-11 bg-white text-red-600 font-semibold"
+                max="100"
+                value={taxaPlataformaPercentual}
+                onChange={(e) => setTaxaPlataformaPercentual(parseFloat(e.target.value) || 0)}
+                placeholder="Ex: 16"
+                className="h-11 bg-white text-rose-600 font-bold"
               />
             </div>
           </div>
 
-          {/* Resumo do Valor Total */}
-          <div className="p-3.5 rounded-2xl bg-gradient-to-br from-[#f0f9ff] to-[#e0f2fe] border border-[#bae6fd] flex items-center justify-between">
-            <div>
-              <span className="text-[11px] font-semibold text-[#64748b]">Total da Reserva:</span>
-              <p className="text-lg font-black text-[#0369a1]">{formatCurrency(previewTotal)}</p>
+          {/* Opção da Comissão da Dani */}
+          <div className="p-3 rounded-2xl bg-[#f8fafc] border border-[#e2e8f0] space-y-2">
+            <div className="flex items-center justify-between">
+              <label className="flex items-center gap-2 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={temComissaoDani}
+                  onChange={(e) => setTemComissaoDani(e.target.checked)}
+                  className="w-4 h-4 rounded text-[#0369a1] focus:ring-[#0369a1] accent-[#0369a1] cursor-pointer"
+                />
+                <span className="text-xs font-bold text-[#0f172a]">
+                  Comissão da Dani (Check-in / Checkout / Gestão)
+                </span>
+              </label>
+              {temComissaoDani && (
+                <span className="text-xs font-bold text-amber-800">
+                  {formatCurrency(previewCalc.valor_comissao_dani)}
+                </span>
+              )}
             </div>
-            <div className="text-right">
-              <span className="text-[10px] text-[#64748b]">Lucro Líquido:</span>
-              <p className="text-sm font-bold text-emerald-700">
-                {formatCurrency(previewTotal - (taxaPlataforma || 0))}
-              </p>
+
+            {temComissaoDani && (
+              <div className="pl-6 space-y-1.5 pt-1">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-[#64748b]">Porcentagem:</span>
+                  <div className="w-24">
+                    <Input
+                      type="number"
+                      step="1"
+                      min="0"
+                      max="100"
+                      value={taxaDaniPercentual}
+                      onChange={(e) => setTaxaDaniPercentual(parseFloat(e.target.value) || 0)}
+                      className="h-8 text-xs bg-white font-bold"
+                    />
+                  </div>
+                  <span className="text-xs font-semibold text-[#64748b]">% sobre saldo</span>
+                </div>
+                <p className="text-[11px] text-[#64748b] leading-tight">
+                  Calculada como {taxaDaniPercentual}% sobre o saldo após deduzir a taxa da plataforma e a despesa de faxina.
+                </p>
+              </div>
+            )}
+          </div>
+
+          {/* Resumo Financeiro em Tempo Real */}
+          <div className="p-3.5 rounded-2xl bg-[#f0f9ff] border border-[#bae6fd] space-y-1.5 text-xs">
+            <div className="flex justify-between text-[#64748b]">
+              <span>Diárias ({previewCalc.num_diarias}x):</span>
+              <span className="font-semibold text-[#0f172a]">
+                {formatCurrency(previewCalc.subtotal_diarias)}
+              </span>
+            </div>
+            <div className="flex justify-between text-[#64748b]">
+              <span>Taxa de Faxina:</span>
+              <span className="font-semibold text-[#0f172a]">
+                + {formatCurrency(previewCalc.taxa_limpeza)}
+              </span>
+            </div>
+            <div className="pt-1 border-t border-[#bae6fd]/60 flex justify-between font-bold text-[#0f172a]">
+              <span>Total Cobrado da Reserva:</span>
+              <span className="text-[#0369a1] font-extrabold text-sm">
+                {formatCurrency(previewCalc.valor_total)}
+              </span>
+            </div>
+
+            {previewCalc.taxa_plataforma > 0 && (
+              <div className="flex justify-between text-rose-600">
+                <span>(-) Taxa {origem.toUpperCase()} ({taxaPlataformaPercentual}%):</span>
+                <span className="font-medium">- {formatCurrency(previewCalc.taxa_plataforma)}</span>
+              </div>
+            )}
+
+            <div className="flex justify-between text-slate-500">
+              <span>(-) Despesa de Faxina:</span>
+              <span className="font-medium">- {formatCurrency(previewCalc.taxa_limpeza)}</span>
+            </div>
+
+            {temComissaoDani && (
+              <div className="flex justify-between text-amber-800">
+                <span>(-) Comissão Dani ({taxaDaniPercentual}% restante):</span>
+                <span className="font-semibold">
+                  - {formatCurrency(previewCalc.valor_comissao_dani)}
+                </span>
+              </div>
+            )}
+
+            <div className="pt-2 border-t border-[#bae6fd] flex justify-between font-black text-sm text-[#0369a1]">
+              <span>Lucro Líquido Real:</span>
+              <span>{formatCurrency(previewCalc.lucro_liquido_real)}</span>
             </div>
           </div>
 
@@ -669,7 +891,7 @@ export default function ItaunaReservasPage() {
           <div className="space-y-1">
             <label className="text-xs font-semibold text-[#0f172a]">Observações</label>
             <Input
-              placeholder="Ex: Horário especial de check-in, pet pequeno porte..."
+              placeholder="Ex: Horário de chegada, pets, pedidos especiais..."
               value={observacoes}
               onChange={(e) => setObservacoes(e.target.value)}
               className="h-10 text-xs bg-white"
@@ -679,7 +901,7 @@ export default function ItaunaReservasPage() {
           <Button
             type="submit"
             isLoading={submitting}
-            className="w-full bg-[#0369a1] hover:bg-[#0284c7] text-white font-bold h-11"
+            className="w-full bg-[#0369a1] hover:bg-[#0284c7] text-white font-semibold h-11 rounded-xl shadow-2xs"
           >
             Confirmar Reserva
           </Button>
@@ -688,15 +910,15 @@ export default function ItaunaReservasPage() {
 
       {/* Modal Editar Reserva */}
       <Modal
-        isOpen={!!reservaToEdit}
+        isOpen={Boolean(reservaToEdit)}
         onClose={() => setReservaToEdit(null)}
         title="Editar Reserva"
-        description="Ajuste tarifas ou status da locação"
+        description="Ajuste tarifas, comissões ou status da locação"
       >
-        {reservaToEdit && (
+        {reservaToEdit && editPreviewCalc && (
           <form onSubmit={handleSaveEdit} className="space-y-3.5">
             {editError && (
-              <div className="p-3 text-xs rounded-xl bg-red-50 border border-red-200 text-red-700">
+              <div className="p-3 text-xs rounded-xl bg-rose-50 border border-rose-200 text-rose-700">
                 {editError}
               </div>
             )}
@@ -707,19 +929,21 @@ export default function ItaunaReservasPage() {
                 <Input
                   type="number"
                   step="0.01"
+                  min="0"
                   value={editValorDiaria}
                   onChange={(e) => setEditValorDiaria(parseFloat(e.target.value) || 0)}
                   className="h-11 bg-white font-bold"
                 />
               </div>
               <div className="space-y-1">
-                <label className="text-xs font-semibold text-[#0f172a]">Taxa Limpeza (R$)</label>
+                <label className="text-xs font-semibold text-[#0f172a]">Taxa Faxina (R$)</label>
                 <Input
                   type="number"
                   step="0.01"
+                  min="0"
                   value={editTaxaLimpeza}
                   onChange={(e) => setEditTaxaLimpeza(parseFloat(e.target.value) || 0)}
-                  className="h-11 bg-white"
+                  className="h-11 bg-white font-semibold"
                 />
               </div>
             </div>
@@ -730,7 +954,7 @@ export default function ItaunaReservasPage() {
                 <select
                   value={editStatus}
                   onChange={(e) => setEditStatus(e.target.value)}
-                  className="w-full h-11 rounded-xl border border-[#cbd5e1] bg-white px-3 text-xs font-semibold"
+                  className="w-full h-11 rounded-xl border border-[#e2e8f0] bg-white px-3 text-xs font-semibold"
                 >
                   <option value="confirmada">Confirmada</option>
                   <option value="em_andamento">Em Andamento</option>
@@ -744,7 +968,7 @@ export default function ItaunaReservasPage() {
                 <select
                   value={editStatusPagamento}
                   onChange={(e) => setEditStatusPagamento(e.target.value)}
-                  className="w-full h-11 rounded-xl border border-[#cbd5e1] bg-white px-3 text-xs font-semibold"
+                  className="w-full h-11 rounded-xl border border-[#e2e8f0] bg-white px-3 text-xs font-semibold"
                 >
                   <option value="pendente">Pendente</option>
                   <option value="parcial">Parcial</option>
@@ -754,14 +978,71 @@ export default function ItaunaReservasPage() {
             </div>
 
             <div className="space-y-1">
-              <label className="text-xs font-semibold text-[#0f172a]">Comissão Plataforma (R$)</label>
+              <label className="text-xs font-semibold text-[#0f172a] flex items-center justify-between">
+                <span>Taxa Plataforma (%)</span>
+                <span className="text-xs text-rose-600 font-bold">
+                  {formatCurrency(editPreviewCalc.taxa_plataforma)}
+                </span>
+              </label>
               <Input
                 type="number"
-                step="0.01"
-                value={editTaxaPlataforma}
-                onChange={(e) => setEditTaxaPlataforma(parseFloat(e.target.value) || 0)}
-                className="h-11 bg-white text-red-600 font-bold"
+                step="0.5"
+                min="0"
+                max="100"
+                value={editTaxaPlataformaPercentual}
+                onChange={(e) => setEditTaxaPlataformaPercentual(parseFloat(e.target.value) || 0)}
+                className="h-11 bg-white text-rose-600 font-bold"
               />
+            </div>
+
+            <div className="p-3 rounded-2xl bg-[#f8fafc] border border-[#e2e8f0] space-y-2">
+              <div className="flex items-center justify-between">
+                <label className="flex items-center gap-2 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={editTemComissaoDani}
+                    onChange={(e) => setEditTemComissaoDani(e.target.checked)}
+                    className="w-4 h-4 rounded text-[#0369a1] focus:ring-[#0369a1] accent-[#0369a1] cursor-pointer"
+                  />
+                  <span className="text-xs font-bold text-[#0f172a]">Comissão da Dani</span>
+                </label>
+                {editTemComissaoDani && (
+                  <span className="text-xs font-bold text-amber-800">
+                    {formatCurrency(editPreviewCalc.valor_comissao_dani)}
+                  </span>
+                )}
+              </div>
+
+              {editTemComissaoDani && (
+                <div className="pl-6 flex items-center gap-2">
+                  <div className="w-24">
+                    <Input
+                      type="number"
+                      step="1"
+                      min="0"
+                      max="100"
+                      value={editTaxaDaniPercentual}
+                      onChange={(e) => setEditTaxaDaniPercentual(parseFloat(e.target.value) || 0)}
+                      className="h-8 text-xs bg-white font-bold"
+                    />
+                  </div>
+                  <span className="text-xs font-semibold text-[#64748b]">% sobre saldo restante</span>
+                </div>
+              )}
+            </div>
+
+            {/* Resumo Financeiro da Edição */}
+            <div className="p-3 rounded-2xl bg-[#f0f9ff] border border-[#bae6fd] text-xs space-y-1">
+              <div className="flex justify-between">
+                <span className="text-[#64748b]">Total da Reserva:</span>
+                <span className="font-bold text-[#0f172a]">
+                  {formatCurrency(editPreviewCalc.valor_total)}
+                </span>
+              </div>
+              <div className="flex justify-between font-bold text-[#0369a1]">
+                <span>Lucro Líquido Real:</span>
+                <span>{formatCurrency(editPreviewCalc.lucro_liquido_real)}</span>
+              </div>
             </div>
 
             <div className="space-y-1">
@@ -776,7 +1057,7 @@ export default function ItaunaReservasPage() {
             <Button
               type="submit"
               isLoading={savingEdit}
-              className="w-full bg-[#0369a1] hover:bg-[#0284c7] text-white font-bold h-11"
+              className="w-full bg-[#0369a1] hover:bg-[#0284c7] text-white font-semibold h-11 rounded-xl"
             >
               Salvar Alterações
             </Button>
@@ -786,32 +1067,29 @@ export default function ItaunaReservasPage() {
 
       {/* Modal Confirmar Exclusão */}
       <Modal
-        isOpen={!!reservaToDelete}
+        isOpen={Boolean(reservaToDelete)}
         onClose={() => setReservaToDelete(null)}
         title="Excluir Reserva"
         description="Tem certeza que deseja excluir esta reserva?"
       >
         <div className="space-y-3 pt-1">
           <p className="text-xs text-[#64748b]">
-            Esta ação não poderá ser desfeita. A data de check-in ficará livre novamente no calendário.
+            Esta ação não poderá ser desfeita. O período ficará livre novamente no calendário da casa.
           </p>
           <div className="flex gap-2 justify-end pt-2">
             <Button
               variant="outline"
-              size="sm"
               onClick={() => setReservaToDelete(null)}
               className="text-xs"
             >
               Cancelar
             </Button>
             <Button
-              variant="danger"
-              size="sm"
-              onClick={handleConfirmDelete}
+              onClick={handleDeleteReserva}
               isLoading={deleting}
-              className="text-xs font-bold"
+              className="bg-rose-600 hover:bg-rose-700 text-white text-xs font-semibold"
             >
-              Excluir Reserva
+              Sim, Excluir
             </Button>
           </div>
         </div>

@@ -36,28 +36,28 @@
   --radius: 0.85rem;
 }
 
-/* Tema Casa Itaúna (Praiano / Moderno) */
+/* Tema Casa Itaúna (Praiano / Moderno / Refinado) */
 .theme-casa-itauna {
   --background: #f8fafc;
   --foreground: #0f172a;
   --surface: #ffffff;
-  --surface-subtle: #f1f5f9;
-  --border: #cbd5e1;
+  --surface-subtle: #f8fafc;
+  --border: #e2e8f0;
 
-  --primary: #0369a1; /* Azul Marinho */
+  --primary: #0369a1; /* Azul Marinho Elegante */
   --primary-hover: #0284c7;
   --primary-foreground: #ffffff;
 
-  --secondary: #38bdf8; /* Azul Piscina */
-  --secondary-foreground: #0f172a;
+  --secondary: #38bdf8; /* Azul Piscina Suave */
+  --secondary-foreground: #0369a1;
 
   --muted: #f1f5f9;
   --muted-foreground: #64748b;
 
-  --accent: #e0f2fe;
+  --accent: #f0f9ff;
   --accent-foreground: #0369a1;
 
-  --highlight: #f97316; /* Laranja Pôr do Sol */
+  --highlight: #f97316; /* Laranja Pôr do Sol Acolhedor */
   --highlight-foreground: #ffffff;
 
   --danger: #ef4444;
@@ -68,14 +68,14 @@
   --warning-bg: #fff7ed;
   --warning-border: #fed7aa;
 
-  --success: #16a34a;
+  --success: #10b981;
   --success-bg: #f0fdf4;
   --success-border: #bbf7d0;
 
   --radius: 0.85rem;
 }
 
-body {
+html, body {
   background-color: var(--background);
   color: var(--foreground);
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
