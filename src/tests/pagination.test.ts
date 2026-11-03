@@ -5,6 +5,13 @@ import { InstallmentsPaginationParams } from '@/app/actions/installments';
 
 describe('Pagination Unit Tests', () => {
   describe('Page count and bounds calculation', () => {
+    it('calculates totalPages for mobile pagination starting at 6 items', () => {
+      const mobilePageSize = 6;
+      expect(Math.ceil(6 / mobilePageSize)).toBe(1);
+      expect(Math.ceil(7 / mobilePageSize)).toBe(2);
+      expect(Math.ceil(13 / mobilePageSize)).toBe(3);
+    });
+
     it('calculates totalPages correctly when items divide evenly', () => {
       const totalItems = 36;
       const pageSize = 12;
