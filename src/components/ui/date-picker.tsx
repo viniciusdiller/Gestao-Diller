@@ -125,7 +125,7 @@ export function DatePicker({
 
       {/* Popover / Dropdown do Calendário ShadCN */}
       {isOpen && (
-        <div className="absolute left-0 right-0 sm:left-auto sm:right-auto top-[calc(100%+6px)] z-50 rounded-2xl border border-[#dfd5c4] bg-white p-2.5 shadow-xl animate-in fade-in zoom-in-95 duration-150">
+        <div className="absolute left-0 right-0 sm:left-auto sm:right-auto top-[calc(100%+6px)] z-50 rounded-2xl border border-[#dfd5c4] bg-white p-2.5 shadow-[0_14px_36px_rgba(45,35,25,0.14)] animate-dropdown origin-top">
           {/* Botões de Atalho Rápido para Vendas e Fiado */}
           {showPresets && (
             <div className="flex items-center gap-1.5 pb-2 mb-2 border-b border-[#ebdcca]/80 overflow-x-auto text-xs no-scrollbar">

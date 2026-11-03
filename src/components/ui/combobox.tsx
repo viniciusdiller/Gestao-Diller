@@ -128,9 +128,9 @@ export function Combobox({
         </div>
       </div>
 
-      {/* Dropdown Flutuante Mobile-Friendly */}
+      {/* Dropdown Flutuante Mobile-Friendly com Animação Suave */}
       {isOpen && (
-        <div className="absolute left-0 right-0 top-[calc(100%+6px)] z-50 rounded-xl border border-[#dfd5c4] bg-white shadow-xl animate-in fade-in zoom-in-95 duration-150 overflow-hidden">
+        <div className="absolute left-0 right-0 top-[calc(100%+6px)] z-50 rounded-2xl border border-[#dfd5c4] bg-white shadow-[0_14px_36px_rgba(45,35,25,0.14)] animate-dropdown origin-top overflow-hidden">
           {/* Input de Busca Digitável em Tempo Real */}
           <div className="p-2 border-b border-[#ebdcca]/80 bg-[#fbf9f6] flex items-center gap-2">
             <Search className="w-4 h-4 text-[#977f5a] shrink-0 ml-1" />
