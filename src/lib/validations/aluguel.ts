@@ -58,7 +58,7 @@ export const CreateReservaSchema = z.object({
   taxa_limpeza: z.number().min(0, 'Taxa de limpeza não pode ser negativa.').default(180),
   taxa_plataforma_percentual: z.number().min(0).max(100, 'Taxa da plataforma não pode ultrapassar 100%.').default(0),
   taxa_plataforma: z.number().min(0, 'Taxa da plataforma não pode ser negativa.').default(0).optional(),
-  tem_comissao_dani: z.boolean().default(false),
+  tem_comissao_dani: z.boolean().default(true),
   taxa_dani_percentual: z.number().min(0).max(100, 'Comissão da Dani não pode ultrapassar 100%.').default(20),
   valor_comissao_dani: z.number().min(0).default(0).optional(),
   lucro_liquido_real: z.number().default(0).optional(),
