@@ -39,7 +39,7 @@ describe('Suíte de Testes dos Fluxos da Casa Itaúna', () => {
       expect(totals.num_diarias).toBe(7);
       expect(totals.subtotal_diarias).toBe(8400); // 7 * 1200
       expect(totals.valor_total).toBe(8650); // 8400 + 250
-      expect(totals.lucro_liquido_reserva).toBe(8250); // 8650 - 400
+      expect(totals.lucro_liquido_reserva).toBe(8000); // 8650 - 400 taxa - 250 faxina = 8000
     }
   });
 
@@ -110,3 +110,4 @@ describe('Suíte de Testes dos Fluxos da Casa Itaúna', () => {
     expect(depois.statusLabel).toBe('Livre Hoje');
   });
 });
+

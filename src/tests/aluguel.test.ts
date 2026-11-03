@@ -21,7 +21,7 @@ describe('Calculador Financeiro e Operacional da Casa Itaúna', () => {
   });
 
   it('calcula os totais da reserva: subtotal, taxa de limpeza e lucro líquido deduzindo comissão', () => {
-    // 4 diárias a R$ 650/dia + R$ 200 limpeza. Airbnb cobrou R$ 350 de comissão
+    // 4 diárias a R$ 650/dia + R$ 200 limpeza. Airbnb cobrou R$ 350 de comissão fixa
     const res = calculateReservaTotals({
       checkin: '2026-11-20',
       checkout: '2026-11-24',
@@ -35,7 +35,38 @@ describe('Calculador Financeiro e Operacional da Casa Itaúna', () => {
     expect(res.taxa_limpeza).toBe(200);
     expect(res.valor_total).toBe(2800); // 2600 + 200
     expect(res.taxa_plataforma).toBe(350);
-    expect(res.lucro_liquido_reserva).toBe(2450); // 2800 - 350
+  });
+
+  it('calcula comissão da plataforma em % (ex: 16% Airbnb), despesa de faxina R$ 180 e comissão da Dani 20%', () => {
+    // Exemplo real do usuário:
+    // 5 noites a R$ 600/noite = R$ 3.000 subtotal
+    // Taxa de limpeza = R$ 180,00
+    // Total cobrado = R$ 3.180,00
+    // Taxa Airbnb 16% sobre R$ 3.180,00 = R$ 508,80
+    // Despesa faxina = R$ 180,00
+    // Saldo após Airbnb e faxina = 3180 - 508.80 - 180 = R$ 2.491,20
+    // Dani tira 20% do que sobrou = 2491.20 * 0.20 = R$ 498,24
+    // Lucro Líquido Real dos Proprietários = 2491.20 - 498.24 = R$ 1.992,96
+    const res = calculateReservaTotals({
+      checkin: '2026-11-10',
+      checkout: '2026-11-15',
+      valorDiaria: 600,
+      taxaLimpeza: 180,
+      taxaPlataformaPercentual: 16,
+      temComissaoDani: true,
+      taxaDaniPercentual: 20,
+    });
+
+    expect(res.num_diarias).toBe(5);
+    expect(res.subtotal_diarias).toBe(3000);
+    expect(res.taxa_limpeza).toBe(180);
+    expect(res.valor_total).toBe(3180);
+    expect(res.taxa_plataforma_percentual).toBe(16);
+    expect(res.taxa_plataforma).toBe(508.8);
+    expect(res.saldo_apos_plataforma_e_faxina).toBe(2491.2);
+    expect(res.tem_comissao_dani).toBe(true);
+    expect(res.valor_comissao_dani).toBe(498.24);
+    expect(res.lucro_liquido_real).toBe(1992.96);
   });
 
   it('identifica corretamente o status de vacância para hoje (Livre vs Ocupada)', () => {
@@ -185,3 +216,4 @@ describe('Validações Zod Casa Itaúna', () => {
     expect(invalid.success).toBe(false);
   });
 });
+
