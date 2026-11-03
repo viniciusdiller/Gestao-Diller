@@ -127,41 +127,79 @@ export async function markInstallmentPaidAction(rawInput: PayInstallmentInput) {
 
   const { installment_id, paid_amount, payment_method, notes } = parsed.data;
 
-  // 1. Atualiza a parcela
-  const { data: updatedInstallment, error: updateErr } = await supabase
+  // Busca dados atuais da parcela
+  const { data: currentInst, error: fetchErr } = await supabase
     .from('installments')
-    .update({
-      status: 'paid',
-      paid_at: new Date().toISOString(),
-      paid_amount,
-      payment_method: payment_method || null,
-      notes: notes || null,
-      updated_at: new Date().toISOString(),
-    })
+    .select('amount, sale_id')
     .eq('id', installment_id)
     .eq('user_id', user.id)
-    .select('sale_id')
     .single();
 
-  if (updateErr || !updatedInstallment) {
-    return { success: false, error: 'Erro ao registrar pagamento: ' + updateErr?.message };
+  if (fetchErr || !currentInst) {
+    return { success: false, error: 'Parcela ou débito não encontrado.' };
   }
 
-  // 2. Verifica se todas as parcelas dessa venda foram pagas
-  const saleId = updatedInstallment.sale_id;
-  const { data: remainingPending } = await supabase
-    .from('installments')
-    .select('id')
-    .eq('sale_id', saleId)
-    .eq('user_id', user.id)
-    .eq('status', 'pending');
+  const currentAmount = Number(currentInst.amount);
+  const isPartial = paid_amount < currentAmount;
 
-  if (!remainingPending || remainingPending.length === 0) {
-    await supabase
-      .from('sales')
-      .update({ status: 'completed', updated_at: new Date().toISOString() })
-      .eq('id', saleId)
+  if (isPartial) {
+    // Abatimento parcial: abate o valor e mantém a parcela em aberto com saldo reduzido
+    const newRemaining = Math.round((currentAmount - paid_amount) * 100) / 100;
+    const { error: partialErr } = await supabase
+      .from('installments')
+      .update({
+        amount: newRemaining,
+        paid_amount,
+        payment_method: payment_method || null,
+        notes: notes ? `${notes} (Abatimento parcial)` : 'Abatimento parcial',
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', installment_id)
       .eq('user_id', user.id);
+
+    if (partialErr) {
+      return {
+        success: false,
+        error: 'Erro ao registrar abatimento parcial: ' + partialErr.message,
+      };
+    }
+  } else {
+    // Quitação integral da parcela
+    const { data: updatedInstallment, error: updateErr } = await supabase
+      .from('installments')
+      .update({
+        status: 'paid',
+        paid_at: new Date().toISOString(),
+        paid_amount,
+        payment_method: payment_method || null,
+        notes: notes || null,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', installment_id)
+      .eq('user_id', user.id)
+      .select('sale_id')
+      .single();
+
+    if (updateErr || !updatedInstallment) {
+      return { success: false, error: 'Erro ao registrar pagamento: ' + updateErr?.message };
+    }
+
+    // 2. Verifica se todas as parcelas dessa venda foram quitadas
+    const saleId = updatedInstallment.sale_id;
+    const { data: remainingPending } = await supabase
+      .from('installments')
+      .select('id')
+      .eq('sale_id', saleId)
+      .eq('user_id', user.id)
+      .eq('status', 'pending');
+
+    if (!remainingPending || remainingPending.length === 0) {
+      await supabase
+        .from('sales')
+        .update({ status: 'completed', updated_at: new Date().toISOString() })
+        .eq('id', saleId)
+        .eq('user_id', user.id);
+    }
   }
 
   revalidatePath('/cobrancas');

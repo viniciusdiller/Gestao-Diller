@@ -47,12 +47,33 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    const clientIds = (clients || []).map((c) => c.id);
+    const debtMap: Record<string, number> = {};
+
+    if (clientIds.length > 0) {
+      const { data: pendingDebts } = await supabase
+        .from('installments')
+        .select('client_id, amount')
+        .eq('user_id', user.id)
+        .eq('status', 'pending')
+        .in('client_id', clientIds);
+
+      (pendingDebts || []).forEach((inst) => {
+        debtMap[inst.client_id] = (debtMap[inst.client_id] || 0) + Number(inst.amount);
+      });
+    }
+
+    const clientsWithDebt = (clients || []).map((c) => ({
+      ...c,
+      outstanding_balance: Math.round((debtMap[c.id] || 0) * 100) / 100,
+    }));
+
     const totalCount = count ?? (clients?.length || 0);
     const totalPages = pageSize ? Math.ceil(totalCount / pageSize) : 1;
 
     return NextResponse.json({
       success: true,
-      clients: clients || [],
+      clients: clientsWithDebt,
       totalCount,
       totalPages,
       currentPage: page,

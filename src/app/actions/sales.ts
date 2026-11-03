@@ -8,6 +8,11 @@ import {
   UpdateSaleSchema,
   UpdateSaleInput,
 } from '@/lib/validations';
+import {
+  calculateSettlement,
+  distributeFIFOAbatement,
+  roundToCents,
+} from '@/lib/services/caderneta-calculator';
 
 export async function createSaleAction(rawInput: SaleInput) {
   const parsed = SaleSchema.safeParse(rawInput);
@@ -27,19 +32,57 @@ export async function createSaleAction(rawInput: SaleInput) {
     return { success: false, error: 'Sessão expirada. Faça login novamente.' };
   }
 
-  const { client_id, description, total_amount, payment_method, sale_date, installments } =
-    parsed.data;
+  const {
+    client_id,
+    description,
+    items,
+    total_amount,
+    paid_amount_now = 0,
+    payment_method,
+    sale_date,
+    installments,
+  } = parsed.data;
 
-  const isFiado = payment_method === 'fiado';
-  const saleStatus = isFiado ? 'pending' : 'completed';
+  // Monta a descrição com base nos itens caso não tenha sido passada manualmente
+  const finalDescription =
+    description && description.trim().length >= 2
+      ? description.trim()
+      : items && items.length > 0
+      ? items.map((it) => `${it.quantity}x ${it.name}`).join(', ')
+      : 'Venda de Semijoias';
 
+  // 1. Busca dívidas pendentes anteriores da cliente para calcular conta corrente
+  const { data: pendingInstallments } = await supabase
+    .from('installments')
+    .select('id, amount, due_date, created_at')
+    .eq('client_id', client_id)
+    .eq('user_id', user.id)
+    .eq('status', 'pending')
+    .order('due_date', { ascending: true });
+
+  const previousDebt = (pendingInstallments || []).reduce(
+    (acc, i) => acc + Number(i.amount),
+    0
+  );
+
+  const settlement = calculateSettlement({
+    previousDebt,
+    saleTotal: total_amount,
+    paidAmountNow: paid_amount_now,
+  });
+
+  const saleStatus = settlement.newSaleRemaining === 0 ? 'completed' : 'pending';
+
+  // 2. Insere a venda com controle de valor pago e restante
   const { data: sale, error: saleErr } = await supabase
     .from('sales')
     .insert({
       user_id: user.id,
       client_id,
-      description: description.trim(),
+      description: finalDescription,
       total_amount,
+      paid_amount_now: settlement.newSalePaid,
+      remaining_amount: settlement.newSaleRemaining,
       payment_method,
       status: saleStatus,
       sale_date: sale_date || new Date().toISOString(),
@@ -51,7 +94,27 @@ export async function createSaleAction(rawInput: SaleInput) {
     return { success: false, error: 'Erro ao registrar venda: ' + saleErr?.message };
   }
 
-  if (installments && installments.length > 0) {
+  // 3. Insere itens da venda na tabela relacional sale_items
+  if (items && items.length > 0) {
+    const itemsToInsert = items.map((it) => ({
+      sale_id: sale.id,
+      user_id: user.id,
+      name: it.name.trim(),
+      quantity: Math.max(1, Number(it.quantity) || 1),
+      unit_price: Number(it.unit_price),
+      total_price: roundToCents(
+        Math.max(1, Number(it.quantity) || 1) * Number(it.unit_price)
+      ),
+    }));
+
+    const { error: itemsErr } = await supabase.from('sale_items').insert(itemsToInsert);
+    if (itemsErr) {
+      console.error('Aviso ao registrar itens da venda:', itemsErr.message);
+    }
+  }
+
+  // 4. Se foram passadas parcelas tradicionais explícitas (ex: testes legados)
+  if (installments && installments.length > 1) {
     const installmentsToInsert = installments.map((inst) => ({
       user_id: user.id,
       sale_id: sale.id,
@@ -63,15 +126,60 @@ export async function createSaleAction(rawInput: SaleInput) {
       status: 'pending',
     }));
 
-    const { error: instErr } = await supabase
-      .from('installments')
-      .insert(installmentsToInsert);
+    await supabase.from('installments').insert(installmentsToInsert);
+  } else if (settlement.newSaleRemaining > 0) {
+    // Caso padrão de caderneta: saldo restante vira débito em aberto
+    const dueDateStr = sale_date
+      ? sale_date.split('T')[0]
+      : new Date().toISOString().split('T')[0];
 
-    if (instErr) {
-      return {
-        success: false,
-        error: 'Venda criada, mas ocorreu um erro ao gerar parcelas: ' + instErr.message,
-      };
+    await supabase.from('installments').insert({
+      user_id: user.id,
+      sale_id: sale.id,
+      client_id,
+      installment_number: 1,
+      total_installments: 1,
+      amount: settlement.newSaleRemaining,
+      due_date: dueDateStr,
+      status: 'pending',
+      notes: 'Saldo em aberto da venda',
+    });
+  }
+
+  // 5. Se o cliente pagou a mais que o novo pedido, quita dívidas anteriores (FIFO)
+  if (
+    settlement.surplusForPreviousDebt > 0 &&
+    pendingInstallments &&
+    pendingInstallments.length > 0
+  ) {
+    const plan = distributeFIFOAbatement(
+      pendingInstallments.map((p) => ({ id: p.id, amount: Number(p.amount) })),
+      settlement.surplusForPreviousDebt
+    );
+
+    for (const op of plan.operations) {
+      if (op.action === 'full') {
+        await supabase
+          .from('installments')
+          .update({
+            status: 'paid',
+            paid_at: new Date().toISOString(),
+            paid_amount: op.originalAmount,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', op.installmentId)
+          .eq('user_id', user.id);
+      } else if (op.action === 'partial') {
+        await supabase
+          .from('installments')
+          .update({
+            amount: op.newRemainingAmount,
+            paid_amount: roundToCents(op.originalAmount - op.newRemainingAmount),
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', op.installmentId)
+          .eq('user_id', user.id);
+      }
     }
   }
 
@@ -79,7 +187,7 @@ export async function createSaleAction(rawInput: SaleInput) {
   revalidatePath('/cobrancas');
   revalidatePath('/clientes');
   revalidatePath('/');
-  return { success: true, sale };
+  return { success: true, sale, settlement };
 }
 
 export async function updateSaleAction(rawInput: UpdateSaleInput) {
@@ -213,6 +321,8 @@ export async function getSalesAction(params?: SalesPaginationParams) {
       id,
       description,
       total_amount,
+      paid_amount_now,
+      remaining_amount,
       payment_method,
       status,
       sale_date,
@@ -220,6 +330,13 @@ export async function getSalesAction(params?: SalesPaginationParams) {
         id,
         name,
         phone
+      ),
+      sale_items (
+        id,
+        name,
+        quantity,
+        unit_price,
+        total_price
       )
     `,
       { count: 'exact' }
