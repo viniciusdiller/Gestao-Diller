@@ -13,6 +13,8 @@ import {
   Pencil,
   Trash2,
   AlertTriangle,
+  CheckCircle2,
+  Coins,
 } from 'lucide-react';
 import {
   getClientsAction,
@@ -20,10 +22,12 @@ import {
   updateClientAction,
   deleteClientAction,
   getClientDetailsAction,
+  recordClientAbatementAction,
 } from '../../actions/clients';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input, Textarea } from '@/components/ui/input';
+import { CurrencyInput } from '@/components/ui/currency-input';
 import { PhoneInput } from '@/components/ui/phone-input';
 import { Modal } from '@/components/ui/modal';
 import { Badge } from '@/components/ui/badge';
@@ -32,6 +36,7 @@ import { LoadingState } from '@/components/ui/loading-state';
 import { useToast } from '@/components/ui/toast';
 import { formatCurrency, formatDateBR } from '@/lib/utils';
 import { sanitizePhoneForWhatsApp } from '@/lib/services/whatsapp';
+import { PaymentMethod } from '@/lib/validations';
 
 export default function ClientesPage() {
   const { showToast } = useToast();
@@ -82,6 +87,51 @@ export default function ClientesPage() {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [clientToDelete, setClientToDelete] = React.useState<any | null>(null);
   const [deletingClient, setDeletingClient] = React.useState(false);
+
+  // Modal de Abatimento Avulso de Dívida
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [clientToAbate, setClientToAbate] = React.useState<any | null>(null);
+  const [abatementAmount, setAbatementAmount] = React.useState<number>(0);
+  const [abatementMethod, setAbatementMethod] = React.useState<PaymentMethod>('pix');
+  const [abatementNotes, setAbatementNotes] = React.useState('');
+  const [submittingAbatement, setSubmittingAbatement] = React.useState(false);
+  const [abatementError, setAbatementError] = React.useState<string | null>(null);
+
+  function handleOpenAbatementModal(client: any) {
+    setClientToAbate(client);
+    setAbatementAmount(Number(client.outstanding_balance || 0));
+    setAbatementMethod('pix');
+    setAbatementNotes('');
+    setAbatementError(null);
+  }
+
+  async function handleSubmitAbatement(e: React.FormEvent) {
+    e.preventDefault();
+    if (!clientToAbate) return;
+    if (abatementAmount <= 0) {
+      setAbatementError('Informe um valor de abatimento maior que zero.');
+      return;
+    }
+
+    setSubmittingAbatement(true);
+    setAbatementError(null);
+
+    const res = await recordClientAbatementAction({
+      client_id: clientToAbate.id,
+      amount: abatementAmount,
+      payment_method: abatementMethod,
+      notes: abatementNotes,
+    });
+
+    if (res.success) {
+      showToast('Abatimento registrado com sucesso! 💰');
+      setClientToAbate(null);
+      loadClients();
+    } else {
+      setAbatementError(res.error || 'Erro ao registrar abatimento.');
+    }
+    setSubmittingAbatement(false);
+  }
 
   const loadClients = React.useCallback(async () => {
     setLoading(true);
@@ -298,39 +348,73 @@ export default function ClientesPage() {
                   key={client.id}
                   onClick={() => handleOpenDetails(client.id)}
                   style={{ animationDelay: `${Math.min(idx * 30, 150)}ms` }}
-                  className="p-4 bg-white border-[#e4dcd0] hover:border-[#977f5a] hover:shadow-md hover:-translate-y-0.5 touch-card animate-slide-up transition-all duration-200 cursor-pointer shadow-xs flex items-center justify-between"
+                  className="p-4 bg-white border-[#e4dcd0] hover:border-[#977f5a] hover:shadow-md hover:-translate-y-0.5 touch-card animate-slide-up transition-all duration-200 cursor-pointer shadow-xs flex flex-col justify-between gap-3"
                 >
-                  <div className="min-w-0 pr-2">
-                    <h3 className="text-sm font-bold text-[#2d251e] truncate">
-                      {client.name}
-                    </h3>
-                    <div className="flex items-center gap-1.5 text-xs text-[#766a5e] mt-0.5">
-                      <Phone className="w-3.5 h-3.5 text-[#977f5a]" />
-                      <span>{client.phone || 'Sem WhatsApp cadastrado'}</span>
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0 pr-2">
+                      <h3 className="text-sm font-bold text-[#2d251e] truncate">
+                        {client.name}
+                      </h3>
+                      <div className="flex items-center gap-1.5 text-xs text-[#766a5e] mt-0.5">
+                        <Phone className="w-3.5 h-3.5 text-[#977f5a]" />
+                        <span>{client.phone || 'Sem WhatsApp cadastrado'}</span>
+                      </div>
+                      {client.notes && (
+                        <p className="text-[11px] text-[#8e8174] truncate mt-1">
+                          {client.notes}
+                        </p>
+                      )}
                     </div>
-                    {client.notes && (
-                      <p className="text-[11px] text-[#8e8174] truncate mt-1">
-                        {client.notes}
-                      </p>
-                    )}
+
+                    <div className="flex items-center gap-2 shrink-0">
+                      {waUrl && (
+                        <a
+                          href={waUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          onClick={(e) => e.stopPropagation()}
+                          className="w-8 h-8 rounded-full bg-[#25D366]/15 text-[#128C7E] hover:bg-[#25D366] hover:text-white flex items-center justify-center active:scale-90 transition-transform duration-100"
+                          title="Abrir WhatsApp"
+                        >
+                          <MessageCircle className="w-4 h-4" />
+                        </a>
+                      )}
+                      <div className="w-7 h-7 rounded-full flex items-center justify-center text-[#766a5e]">
+                        <ChevronRight className="w-4 h-4" />
+                      </div>
+                    </div>
                   </div>
 
-                  <div className="flex items-center gap-2 shrink-0">
-                    {waUrl && (
-                      <a
-                        href={waUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        onClick={(e) => e.stopPropagation()}
-                        className="w-9 h-9 rounded-full bg-[#25D366]/15 text-[#128C7E] hover:bg-[#25D366] hover:text-white flex items-center justify-center active:scale-90 transition-transform duration-100"
-                        title="Abrir WhatsApp"
-                      >
-                        <MessageCircle className="w-4 h-4" />
-                      </a>
+                  {/* Destaque do Saldo Devedor / Falta Pagar */}
+                  <div className="pt-2 border-t border-[#f0e9df] flex items-center justify-between gap-2">
+                    {Number(client.outstanding_balance || 0) > 0 ? (
+                      <div className="flex items-center justify-between w-full">
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold bg-amber-50 text-amber-800 border border-amber-200">
+                          <Clock className="w-3.5 h-3.5 text-amber-600" />
+                          <span>Falta pagar:</span>
+                          <strong className="text-amber-900 font-extrabold">
+                            {formatCurrency(client.outstanding_balance)}
+                          </strong>
+                        </span>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleOpenAbatementModal(client);
+                          }}
+                          className="h-7 text-[11px] px-2.5 font-bold border-[#d5c3aa] text-[#977f5a] hover:bg-[#faf6f0]"
+                        >
+                          <Coins className="w-3 h-3 mr-1" /> Abater
+                        </Button>
+                      </div>
+                    ) : (
+                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">
+                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                        <span>Em dia (R$ 0,00)</span>
+                      </span>
                     )}
-                    <div className="w-7 h-7 rounded-full flex items-center justify-center text-[#766a5e]">
-                      <ChevronRight className="w-4 h-4" />
-                    </div>
                   </div>
                 </Card>
               );
@@ -665,6 +749,102 @@ export default function ClientesPage() {
             </Button>
           </div>
         </div>
+      </Modal>
+      {/* Modal de Abatimento Avulso */}
+      <Modal
+        isOpen={Boolean(clientToAbate)}
+        onClose={() => setClientToAbate(null)}
+        title="Registrar Abatimento de Dívida"
+        description={
+          clientToAbate
+            ? `Cliente: ${clientToAbate.name} • Saldo em aberto atual: ${formatCurrency(
+                clientToAbate.outstanding_balance || 0
+              )}`
+            : ''
+        }
+      >
+        {clientToAbate && (
+          <form onSubmit={handleSubmitAbatement} className="space-y-4">
+            {abatementError && (
+              <div className="p-3 text-xs rounded-xl bg-red-50 border border-red-200 text-red-700">
+                {abatementError}
+              </div>
+            )}
+
+            <div className="p-3 rounded-xl bg-[#faf6f0] border border-[#ebdcca] space-y-1">
+              <span className="text-[11px] text-[#766a5e] font-medium">Dívida Atual em Aberto</span>
+              <p className="text-lg font-black text-amber-900">
+                {formatCurrency(clientToAbate.outstanding_balance || 0)}
+              </p>
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-xs font-semibold text-[#2d251e]">
+                Valor do Abatimento / Pagamento *
+              </label>
+              <CurrencyInput
+                value={abatementAmount}
+                onChange={setAbatementAmount}
+                className="bg-white font-bold"
+              />
+              <div className="flex gap-2 pt-1">
+                <button
+                  type="button"
+                  onClick={() => setAbatementAmount(Number(clientToAbate.outstanding_balance || 0))}
+                  className="text-[11px] font-bold text-[#977f5a] hover:underline"
+                >
+                  Quitar valor total ({formatCurrency(clientToAbate.outstanding_balance || 0)})
+                </button>
+              </div>
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-xs font-semibold text-[#2d251e]">
+                Forma de Pagamento *
+              </label>
+              <select
+                value={abatementMethod}
+                onChange={(e) => setAbatementMethod(e.target.value as PaymentMethod)}
+                className="w-full h-11 px-3 text-xs rounded-xl border border-[#d5c3aa] bg-white font-medium text-[#2d251e]"
+              >
+                <option value="pix">PIX</option>
+                <option value="dinheiro">Dinheiro</option>
+                <option value="cartao_debito">Cartão de Débito</option>
+                <option value="cartao_credito">Cartão de Crédito</option>
+              </select>
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-xs font-semibold text-[#2d251e]">
+                Observação (opcional)
+              </label>
+              <Input
+                placeholder="Ex: Pagamento parcial entregue na loja"
+                value={abatementNotes}
+                onChange={(e) => setAbatementNotes(e.target.value)}
+                className="bg-white text-xs h-10"
+              />
+            </div>
+
+            <div className="flex gap-2 pt-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setClientToAbate(null)}
+                className="flex-1 text-xs"
+              >
+                Cancelar
+              </Button>
+              <Button
+                type="submit"
+                isLoading={submittingAbatement}
+                className="flex-1 text-xs font-bold"
+              >
+                Confirmar Abatimento
+              </Button>
+            </div>
+          </form>
+        )}
       </Modal>
     </div>
   );
