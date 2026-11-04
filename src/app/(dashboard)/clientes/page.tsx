@@ -385,15 +385,37 @@ export default function ClientesPage() {
                     </div>
                   </div>
 
-                  {/* Destaque do Saldo Devedor / Falta Pagar */}
+                  {/* Destaque do Saldo Devedor ou Saldo Extra / Crédito */}
                   <div className="pt-2 border-t border-[#f0e9df] flex items-center justify-between gap-2">
-                    {Number(client.outstanding_balance || 0) > 0 ? (
+                    {Number(client.credit_balance || 0) > 0 ? (
+                      <div className="flex items-center justify-between w-full">
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold bg-emerald-50 text-emerald-800 border border-emerald-300">
+                          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                          <span>Saldo Extra:</span>
+                          <strong className="text-emerald-900 font-extrabold">
+                            +{formatCurrency(client.credit_balance)}
+                          </strong>
+                        </span>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleOpenAbatementModal(client);
+                          }}
+                          className="h-7 text-[11px] px-2.5 font-bold border-emerald-300 text-emerald-800 hover:bg-emerald-50"
+                        >
+                          <Coins className="w-3 h-3 mr-1" /> + Saldo
+                        </Button>
+                      </div>
+                    ) : Number(client.outstanding_balance || 0) > 0 ? (
                       <div className="flex items-center justify-between w-full">
                         <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold bg-amber-50 text-amber-800 border border-amber-200">
                           <Clock className="w-3.5 h-3.5 text-amber-600" />
                           <span>Falta pagar:</span>
                           <strong className="text-amber-900 font-extrabold">
-                            {formatCurrency(client.outstanding_balance)}
+                            -{formatCurrency(client.outstanding_balance)}
                           </strong>
                         </span>
                         <Button
@@ -410,10 +432,24 @@ export default function ClientesPage() {
                         </Button>
                       </div>
                     ) : (
-                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">
-                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-                        <span>Em dia (R$ 0,00)</span>
-                      </span>
+                      <div className="flex items-center justify-between w-full">
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium bg-slate-50 text-slate-700 border border-slate-200">
+                          <CheckCircle2 className="w-3.5 h-3.5 text-slate-500" />
+                          <span>Em dia (R$ 0,00)</span>
+                        </span>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleOpenAbatementModal(client);
+                          }}
+                          className="h-7 text-[11px] px-2.5 font-bold border-slate-200 text-slate-600 hover:bg-slate-50"
+                        >
+                          <Coins className="w-3 h-3 mr-1" /> Adiantar
+                        </Button>
+                      </div>
                     )}
                   </div>
                 </Card>
@@ -559,19 +595,35 @@ export default function ClientesPage() {
 
               <div className="p-3 rounded-xl bg-white border border-[#e4dcd0]">
                 <div className="text-[10px] font-medium text-[#766a5e] flex items-center gap-1">
-                  <Clock className="w-3.5 h-3.5 text-[#b91c1c]" /> Saldo Devedor
+                  {clientDetails.creditBalance > 0 ? (
+                    <>
+                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" /> Saldo Extra
+                    </>
+                  ) : (
+                    <>
+                      <Clock className="w-3.5 h-3.5 text-[#b91c1c]" /> Saldo Devedor
+                    </>
+                  )}
                 </div>
                 <div
                   className={`text-base font-bold mt-1 ${
-                    clientDetails.outstandingBalance > 0
+                    clientDetails.creditBalance > 0
+                      ? 'text-emerald-700'
+                      : clientDetails.outstandingBalance > 0
                       ? 'text-[#b91c1c]'
                       : 'text-[#15803d]'
                   }`}
                 >
-                  {formatCurrency(clientDetails.outstandingBalance)}
+                  {clientDetails.creditBalance > 0
+                    ? `+${formatCurrency(clientDetails.creditBalance)}`
+                    : formatCurrency(clientDetails.outstandingBalance)}
                 </div>
                 <div className="text-[10px] text-[#766a5e] mt-0.5">
-                  {clientDetails.outstandingBalance > 0 ? 'Fiado em aberto' : 'Em dia'}
+                  {clientDetails.creditBalance > 0
+                    ? 'Crédito a favor'
+                    : clientDetails.outstandingBalance > 0
+                    ? 'Fiado em aberto'
+                    : 'Em dia'}
                 </div>
               </div>
             </div>
@@ -751,15 +803,18 @@ export default function ClientesPage() {
         </div>
       </Modal>
       {/* Modal de Abatimento Avulso */}
+      {/* Modal de Abatimento ou Saldo Extra */}
       <Modal
         isOpen={Boolean(clientToAbate)}
         onClose={() => setClientToAbate(null)}
-        title="Registrar Abatimento de Dívida"
+        title={
+          Number(clientToAbate?.outstanding_balance || 0) > 0
+            ? 'Registrar Pagamento / Abatimento'
+            : 'Adicionar Saldo Extra / Adiantamento'
+        }
         description={
           clientToAbate
-            ? `Cliente: ${clientToAbate.name} • Saldo em aberto atual: ${formatCurrency(
-                clientToAbate.outstanding_balance || 0
-              )}`
+            ? `Cliente: ${clientToAbate.name}`
             : ''
         }
       >
@@ -771,32 +826,76 @@ export default function ClientesPage() {
               </div>
             )}
 
-            <div className="p-3 rounded-xl bg-[#faf6f0] border border-[#ebdcca] space-y-1">
-              <span className="text-[11px] text-[#766a5e] font-medium">Dívida Atual em Aberto</span>
-              <p className="text-lg font-black text-amber-900">
-                {formatCurrency(clientToAbate.outstanding_balance || 0)}
-              </p>
+            <div className="grid grid-cols-2 gap-2">
+              <div className="p-3 rounded-xl bg-[#faf6f0] border border-[#ebdcca] space-y-1">
+                <span className="text-[11px] text-[#766a5e] font-medium">Dívida Atual</span>
+                <p className="text-base font-black text-amber-900">
+                  {formatCurrency(clientToAbate.outstanding_balance || 0)}
+                </p>
+              </div>
+              <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 space-y-1">
+                <span className="text-[11px] text-emerald-800 font-medium">Saldo Extra Atual</span>
+                <p className="text-base font-black text-emerald-900">
+                  +{formatCurrency(clientToAbate.credit_balance || 0)}
+                </p>
+              </div>
             </div>
 
             <div className="space-y-1">
               <label className="text-xs font-semibold text-[#2d251e]">
-                Valor do Abatimento / Pagamento *
+                {Number(clientToAbate.outstanding_balance || 0) > 0
+                  ? 'Valor Pago pela Cliente *'
+                  : 'Valor a Adiantar / Guardar como Saldo *'}
               </label>
               <CurrencyInput
                 value={abatementAmount}
                 onChange={setAbatementAmount}
                 className="bg-white font-bold"
               />
-              <div className="flex gap-2 pt-1">
-                <button
-                  type="button"
-                  onClick={() => setAbatementAmount(Number(clientToAbate.outstanding_balance || 0))}
-                  className="text-[11px] font-bold text-[#977f5a] hover:underline"
-                >
-                  Quitar valor total ({formatCurrency(clientToAbate.outstanding_balance || 0)})
-                </button>
-              </div>
+              {Number(clientToAbate.outstanding_balance || 0) > 0 && (
+                <div className="flex gap-2 pt-1">
+                  <button
+                    type="button"
+                    onClick={() => setAbatementAmount(Number(clientToAbate.outstanding_balance || 0))}
+                    className="text-[11px] font-bold text-[#977f5a] hover:underline"
+                  >
+                    Quitar valor exato da dívida ({formatCurrency(clientToAbate.outstanding_balance || 0)})
+                  </button>
+                </div>
+              )}
             </div>
+
+            {/* Simulação em tempo real */}
+            {abatementAmount > 0 && (
+              <div className="p-3 rounded-xl text-xs space-y-1.5 border bg-slate-50 border-slate-200">
+                {Number(clientToAbate.outstanding_balance || 0) === 0 ? (
+                  <div className="text-emerald-800 font-semibold flex items-center gap-1.5">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                    <span>Como a cliente não tem dívidas, {formatCurrency(abatementAmount)} ficarão guardados como <strong>Saldo Extra</strong>.</span>
+                  </div>
+                ) : abatementAmount > Number(clientToAbate.outstanding_balance || 0) ? (
+                  <div className="space-y-1">
+                    <div className="text-emerald-800 font-semibold flex items-center gap-1.5">
+                      <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                      <span>{formatCurrency(clientToAbate.outstanding_balance || 0)} quitarão toda a dívida pendente.</span>
+                    </div>
+                    <div className="text-emerald-900 font-bold pl-5">
+                      +{formatCurrency(abatementAmount - Number(clientToAbate.outstanding_balance || 0))} excedentes virarão Saldo Extra!
+                    </div>
+                  </div>
+                ) : abatementAmount === Number(clientToAbate.outstanding_balance || 0) ? (
+                  <div className="text-emerald-800 font-semibold flex items-center gap-1.5">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                    <span>Quita 100% da dívida da cliente.</span>
+                  </div>
+                ) : (
+                  <div className="text-amber-800 font-medium flex items-center gap-1.5">
+                    <Clock className="w-4 h-4 text-amber-600 shrink-0" />
+                    <span>Abaterá {formatCurrency(abatementAmount)}. Restará uma dívida de {formatCurrency(Number(clientToAbate.outstanding_balance || 0) - abatementAmount)}.</span>
+                  </div>
+                )}
+              </div>
+            )}
 
             <div className="space-y-1">
               <label className="text-xs font-semibold text-[#2d251e]">
@@ -840,7 +939,9 @@ export default function ClientesPage() {
                 isLoading={submittingAbatement}
                 className="flex-1 text-xs font-bold"
               >
-                Confirmar Abatimento
+                {Number(clientToAbate.outstanding_balance || 0) > 0
+                  ? 'Confirmar Pagamento'
+                  : 'Adicionar Saldo'}
               </Button>
             </div>
           </form>

@@ -128,15 +128,19 @@ export default function VendasPage() {
     }
   }, [items]);
 
-  // Cliente selecionado e saldo devedor anterior da caderneta
+  // Cliente selecionado, saldo extra e saldo devedor anterior da caderneta
+  const [applyCredit, setApplyCredit] = React.useState(true);
   const selectedClient = clients.find((c) => c.id === clientId);
   const clientPreviousDebt = Number(selectedClient?.outstanding_balance || 0);
-  const totalDueWithSale = roundToCents(clientPreviousDebt + totalAmount);
+  const clientCreditBalance = Number(selectedClient?.credit_balance || 0);
   const settlementPreview = calculateSettlement({
     previousDebt: clientPreviousDebt,
     saleTotal: totalAmount,
     paidAmountNow,
+    availableCredit: clientCreditBalance,
+    applyCredit,
   });
+  const totalDueWithSale = settlementPreview.totalDueWithSale;
 
   // Cadastro Rápido Inline de Cliente
   const [showQuickClient, setShowQuickClient] = React.useState(false);
@@ -293,6 +297,7 @@ export default function VendasPage() {
       items: validItems.length > 0 ? validItems : undefined,
       total_amount: totalAmount,
       paid_amount_now: paidAmountNow,
+      apply_credit: applyCredit,
       payment_method: paymentMethod,
       sale_date: saleDate ? new Date(saleDate + 'T12:00:00Z').toISOString() : undefined,
       installments:
@@ -309,6 +314,7 @@ export default function VendasPage() {
       setPaidAmountNow(0);
       setTotalAmount(0);
       setPaymentMethod('pix');
+      setApplyCredit(true);
       setGeneratedInstallments([]);
       showToast('Venda registrada com sucesso! 💎');
       loadData();
@@ -792,18 +798,58 @@ export default function VendasPage() {
           {/* Painel da Conta Corrente / Caderneta do Cliente */}
           {clientId && (
             <div className="p-3 rounded-2xl bg-[#faf6f0] border border-[#ebdcca] space-y-2">
-              <div className="flex items-center justify-between text-xs">
-                <span className="text-[#766a5e] font-medium">Dívida anterior da cliente:</span>
-                <span className="font-bold text-[#2d251e]">
-                  {formatCurrency(clientPreviousDebt)}
-                </span>
-              </div>
+              {clientCreditBalance > 0 && (
+                <div className="p-2.5 rounded-xl bg-emerald-50 border border-emerald-300 flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                    <div>
+                      <div className="text-xs font-bold text-emerald-950">
+                        Cliente possui {formatCurrency(clientCreditBalance)} de Saldo Extra
+                      </div>
+                      <p className="text-[11px] text-emerald-800">
+                        {applyCredit
+                          ? `Abatendo ${formatCurrency(settlementPreview.creditApplied)} deste pedido.`
+                          : 'Saldo guardado para uso futuro.'}
+                      </p>
+                    </div>
+                  </div>
+                  <label className="flex items-center gap-1.5 cursor-pointer select-none">
+                    <input
+                      type="checkbox"
+                      checked={applyCredit}
+                      onChange={(e) => setApplyCredit(e.target.checked)}
+                      className="h-4 w-4 rounded border-emerald-400 text-emerald-600 focus:ring-emerald-500 cursor-pointer"
+                    />
+                    <span className="text-xs font-bold text-emerald-900">Usar</span>
+                  </label>
+                </div>
+              )}
+
+              {clientPreviousDebt > 0 && (
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-[#766a5e] font-medium">Dívida anterior da cliente:</span>
+                  <span className="font-bold text-[#2d251e]">
+                    {formatCurrency(clientPreviousDebt)}
+                  </span>
+                </div>
+              )}
+
               <div className="flex items-center justify-between text-xs">
                 <span className="text-[#766a5e] font-medium">Novo pedido atual:</span>
                 <span className="font-bold text-[#2d251e]">
                   +{formatCurrency(totalAmount)}
                 </span>
               </div>
+
+              {applyCredit && settlementPreview.creditApplied > 0 && (
+                <div className="flex items-center justify-between text-xs text-emerald-700">
+                  <span className="font-medium">Saldo extra aplicado:</span>
+                  <span className="font-bold">
+                    -{formatCurrency(settlementPreview.creditApplied)}
+                  </span>
+                </div>
+              )}
+
               <div className="pt-1.5 border-t border-[#ebdcca] flex items-center justify-between text-xs">
                 <span className="font-bold text-[#2d251e]">Total acumulado em aberto:</span>
                 <span className="text-sm font-black text-amber-900">
@@ -837,9 +883,9 @@ export default function VendasPage() {
               </button>
               <button
                 type="button"
-                onClick={() => setPaidAmountNow(totalAmount)}
+                onClick={() => setPaidAmountNow(settlementPreview.effectiveSaleTotal)}
                 className="py-1.5 px-2 rounded-lg text-[10px] font-bold bg-[#faf6f0] text-[#977f5a] border border-[#ebdcca] hover:bg-[#f2e7d8] transition-colors truncate"
-                title={`Pagar apenas os R$ ${totalAmount} deste pedido`}
+                title={`Pagar apenas os R$ ${settlementPreview.effectiveSaleTotal} deste pedido`}
               >
                 Apenas o pedido
               </button>
@@ -852,15 +898,30 @@ export default function VendasPage() {
               </button>
             </div>
 
-            {/* Indicador em Tempo Real do Saldo Devedor Restante */}
+            {/* Indicador em Tempo Real do Saldo Devedor Restante ou Saldo Extra */}
             <div className="pt-1">
-              {settlementPreview.finalOutstandingBalance === 0 ? (
+              {settlementPreview.surplusCreditGenerated > 0 ? (
+                <div className="p-2.5 rounded-xl bg-emerald-50 border border-emerald-200 text-xs text-emerald-800 flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                  <div>
+                    <p className="font-bold">
+                      Conta quitada e +{formatCurrency(settlementPreview.surplusCreditGenerated)} de Saldo Extra!
+                    </p>
+                    <p className="text-[11px] text-emerald-700">
+                      Saldo extra total acumulado da cliente:{' '}
+                      <strong>{formatCurrency(settlementPreview.finalCreditBalance)}</strong>
+                    </p>
+                  </div>
+                </div>
+              ) : settlementPreview.finalOutstandingBalance === 0 ? (
                 <div className="p-2.5 rounded-xl bg-emerald-50 border border-emerald-200 text-xs text-emerald-800 flex items-center gap-2">
                   <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
                   <div>
                     <p className="font-bold">Conta 100% quitada!</p>
                     <p className="text-[11px] text-emerald-700">
-                      O cliente não ficará com nenhum saldo devedor.
+                      {settlementPreview.finalCreditBalance > 0
+                        ? `A cliente mantém ${formatCurrency(settlementPreview.finalCreditBalance)} de saldo extra.`
+                        : 'A cliente não ficará com nenhum débito em aberto.'}
                     </p>
                   </div>
                 </div>
