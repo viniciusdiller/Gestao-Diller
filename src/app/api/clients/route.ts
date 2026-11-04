@@ -63,10 +63,17 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    const clientsWithDebt = (clients || []).map((c) => ({
-      ...c,
-      outstanding_balance: Math.round((debtMap[c.id] || 0) * 100) / 100,
-    }));
+    const clientsWithDebt = (clients || []).map((c) => {
+      const debt = Math.round((debtMap[c.id] || 0) * 100) / 100;
+      const credit = Math.round((Number(c.credit_balance) || 0) * 100) / 100;
+      return {
+        ...c,
+        credit_balance: credit,
+        outstanding_debt: debt,
+        net_balance: Math.round((credit - debt) * 100) / 100,
+        outstanding_balance: debt,
+      };
+    });
 
     const totalCount = count ?? (clients?.length || 0);
     const totalPages = pageSize ? Math.ceil(totalCount / pageSize) : 1;

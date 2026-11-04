@@ -196,10 +196,17 @@ export async function getClientsAction(params?: ClientsPaginationParams) {
     });
   }
 
-  const clientsWithDebt = (clients || []).map((c) => ({
-    ...c,
-    outstanding_balance: roundToCents(debtMap[c.id] || 0),
-  }));
+  const clientsWithDebt = (clients || []).map((c) => {
+    const debt = roundToCents(debtMap[c.id] || 0);
+    const credit = roundToCents(Number(c.credit_balance) || 0);
+    return {
+      ...c,
+      credit_balance: credit,
+      outstanding_debt: debt,
+      net_balance: roundToCents(credit - debt),
+      outstanding_balance: debt,
+    };
+  });
 
   const totalCount = count ?? (clients?.length || 0);
   const totalPages = pageSize ? Math.ceil(totalCount / pageSize) : 1;
@@ -233,8 +240,22 @@ export async function recordClientAbatementAction(rawInput: ClientAbatementInput
 
   const { client_id, amount, payment_method, notes } = parsed.data;
 
+  // Busca dados atuais do cliente para verificar saldo credor
+  const { data: client, error: clientErr } = await supabase
+    .from('clients')
+    .select('id, name, credit_balance')
+    .eq('id', client_id)
+    .eq('user_id', user.id)
+    .single();
+
+  if (clientErr || !client) {
+    return { success: false, error: 'Cliente não encontrada.' };
+  }
+
+  const currentCredit = roundToCents(Number(client.credit_balance) || 0);
+
   // Busca débitos pendentes do cliente ordenados pelo mais antigo
-  const { data: pendingInstallments, error: fetchErr } = await supabase
+  const { data: pendingInstallments } = await supabase
     .from('installments')
     .select('id, amount, due_date, created_at, sale_id')
     .eq('client_id', client_id)
@@ -242,10 +263,33 @@ export async function recordClientAbatementAction(rawInput: ClientAbatementInput
     .eq('status', 'pending')
     .order('due_date', { ascending: true });
 
-  if (fetchErr || !pendingInstallments || pendingInstallments.length === 0) {
-    return { success: false, error: 'Este cliente não possui débitos pendentes em aberto.' };
+  // CASO 1: Cliente sem débitos pendentes -> Pagamento vira 100% Saldo Extra / Crédito
+  if (!pendingInstallments || pendingInstallments.length === 0) {
+    const newCreditBalance = roundToCents(currentCredit + amount);
+    await supabase
+      .from('clients')
+      .update({
+        credit_balance: newCreditBalance,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', client_id)
+      .eq('user_id', user.id);
+
+    revalidatePath('/clientes');
+    revalidatePath('/cobrancas');
+    revalidatePath('/vendas');
+    revalidatePath('/');
+
+    return {
+      success: true,
+      totalAbated: 0,
+      newTotalDebt: 0,
+      surplusCredit: amount,
+      newCreditBalance,
+    };
   }
 
+  // CASO 2: Cliente possui débitos pendentes -> Amortiza em cascata (FIFO)
   const plan = distributeFIFOAbatement(
     pendingInstallments.map((p) => ({ id: p.id, amount: Number(p.amount) })),
     amount
@@ -280,6 +324,20 @@ export async function recordClientAbatementAction(rawInput: ClientAbatementInput
     }
   }
 
+  // Se o valor pago superou a soma de todas as dívidas, o excedente vira Saldo Extra
+  let newCreditBalance = currentCredit;
+  if (plan.remainingCashUnused > 0) {
+    newCreditBalance = roundToCents(currentCredit + plan.remainingCashUnused);
+    await supabase
+      .from('clients')
+      .update({
+        credit_balance: newCreditBalance,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', client_id)
+      .eq('user_id', user.id);
+  }
+
   revalidatePath('/clientes');
   revalidatePath('/cobrancas');
   revalidatePath('/vendas');
@@ -289,6 +347,8 @@ export async function recordClientAbatementAction(rawInput: ClientAbatementInput
     success: true,
     totalAbated: plan.totalAbated,
     newTotalDebt: plan.newTotalDebt,
+    surplusCredit: plan.remainingCashUnused,
+    newCreditBalance,
   };
 }
 
@@ -344,16 +404,25 @@ export async function getClientDetailsAction(clientId: string) {
   }
 
   const pendingInstallments = (installments || []).filter((i) => i.status === 'pending');
-  const outstandingBalance = pendingInstallments.reduce((acc, i) => acc + Number(i.amount), 0);
+  const outstandingDebt = roundToCents(pendingInstallments.reduce((acc, i) => acc + Number(i.amount), 0));
+  const creditBalance = roundToCents(Number(client.credit_balance) || 0);
+  const netBalance = roundToCents(creditBalance - outstandingDebt);
 
   return {
     success: true,
-    client,
+    client: {
+      ...client,
+      credit_balance: creditBalance,
+      outstanding_debt: outstandingDebt,
+      net_balance: netBalance,
+    },
     sales: sales || [],
     installments: installments || [],
     totalSpent,
     mostFrequentPaymentMethod,
-    outstandingBalance,
+    outstandingBalance: outstandingDebt,
+    creditBalance,
+    netBalance,
     salesCount: validSales.length,
   };
 }

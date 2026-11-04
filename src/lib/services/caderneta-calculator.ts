@@ -8,15 +8,21 @@ export interface SettlementParams {
   previousDebt: number;
   saleTotal: number;
   paidAmountNow: number;
+  availableCredit?: number; // Saldo extra / crédito existente da cliente
+  applyCredit?: boolean; // Se deve abater o crédito existente nesta venda (padrão true)
 }
 
 export interface SettlementResult {
   totalDueWithSale: number;
+  creditApplied: number; // Quanto do saldo extra foi consumido nesta venda
+  effectiveSaleTotal: number; // Valor da venda após dedução do crédito aplicado
   newSalePaid: number;
   newSaleRemaining: number;
   surplusForPreviousDebt: number;
   amountAbatedFromPrevious: number;
-  finalOutstandingBalance: number;
+  finalOutstandingBalance: number; // Dívida restante (0 se quitado)
+  surplusCreditGenerated: number; // Saldo extra NOVO gerado pelo pagamento excedente
+  finalCreditBalance: number; // Saldo extra total resultante da cliente
   isFullySettled: boolean;
 }
 
@@ -65,47 +71,68 @@ export function calculateSaleItemsTotal(items: SaleItemPayload[]): number {
 /**
  * Calcula a conta corrente da venda:
  * Permite abater dívida anterior caso o cliente pague a mais que o novo pedido,
- * ou adiciona o saldo restante à caderneta se pagar a menos ou nada.
+ * adiciona o saldo restante à caderneta se pagar a menos,
+ * ou converte excedentes em SALDO EXTRA (crédito) para a cliente.
  */
 export function calculateSettlement({
   previousDebt,
   saleTotal,
   paidAmountNow,
+  availableCredit = 0,
+  applyCredit = true,
 }: SettlementParams): SettlementResult {
   const prev = Math.max(0, roundToCents(previousDebt));
   const sale = Math.max(0, roundToCents(saleTotal));
   const paid = Math.max(0, roundToCents(paidAmountNow));
+  const credit = Math.max(0, roundToCents(availableCredit));
 
-  const totalDueWithSale = roundToCents(prev + sale);
+  // 1. Aplica o saldo extra/crédito existente na venda se habilitado
+  const creditApplied = applyCredit ? Math.min(credit, sale) : 0;
+  const remainingCreditAfterSale = roundToCents(credit - creditApplied);
+  const effectiveSaleTotal = roundToCents(sale - creditApplied);
 
-  if (paid >= sale) {
+  const totalDueWithSale = roundToCents(prev + effectiveSaleTotal);
+
+  if (paid >= effectiveSaleTotal) {
     const newSaleRemaining = 0;
-    const surplus = roundToCents(paid - sale);
+    const surplus = roundToCents(paid - effectiveSaleTotal);
     const amountAbatedFromPrevious = Math.min(prev, surplus);
     const finalOutstandingBalance = roundToCents(Math.max(0, prev - surplus));
 
+    // Se o pagamento superou a venda e quitou toda a dívida anterior, o que sobrar vira NOVO saldo extra
+    const surplusCreditGenerated = roundToCents(Math.max(0, surplus - prev));
+    const finalCreditBalance = roundToCents(remainingCreditAfterSale + surplusCreditGenerated);
+
     return {
       totalDueWithSale,
-      newSalePaid: sale,
+      creditApplied,
+      effectiveSaleTotal,
+      newSalePaid: effectiveSaleTotal,
       newSaleRemaining,
       surplusForPreviousDebt: surplus,
       amountAbatedFromPrevious,
       finalOutstandingBalance,
+      surplusCreditGenerated,
+      finalCreditBalance,
       isFullySettled: finalOutstandingBalance === 0,
     };
   }
 
-  // Pagamento inferior ao valor do novo pedido (ou zero)
-  const newSaleRemaining = roundToCents(sale - paid);
+  // Pagamento inferior ao valor restante do novo pedido (ou zero)
+  const newSaleRemaining = roundToCents(effectiveSaleTotal - paid);
   const finalOutstandingBalance = roundToCents(prev + newSaleRemaining);
 
   return {
     totalDueWithSale,
+    creditApplied,
+    effectiveSaleTotal,
     newSalePaid: paid,
     newSaleRemaining,
     surplusForPreviousDebt: 0,
     amountAbatedFromPrevious: 0,
     finalOutstandingBalance,
+    surplusCreditGenerated: 0,
+    finalCreditBalance: remainingCreditAfterSale,
     isFullySettled: false,
   };
 }

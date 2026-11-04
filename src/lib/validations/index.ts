@@ -67,6 +67,7 @@ export const SaleSchema = z
     items: z.array(SaleItemSchema).optional(),
     total_amount: z.number().positive('O valor total deve ser maior que zero.'),
     paid_amount_now: z.number().min(0, 'O valor pago não pode ser negativo.').optional(),
+    apply_credit: z.boolean().optional(),
     payment_method: PaymentMethodEnum,
     sale_date: z.string().optional(),
     installments: z.array(InstallmentDraftSchema).optional(),

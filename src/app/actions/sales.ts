@@ -44,21 +44,32 @@ export async function createSaleAction(rawInput: SaleInput) {
   } = parsed.data;
 
   // Monta a descrição com base nos itens caso não tenha sido passada manualmente
-  const finalDescription =
+  let finalDescription =
     description && description.trim().length >= 2
       ? description.trim()
       : items && items.length > 0
       ? items.map((it) => `${it.quantity}x ${it.name}`).join(', ')
       : 'Venda de Semijoias';
 
-  // 1. Busca dívidas pendentes anteriores da cliente para calcular conta corrente
-  const { data: pendingInstallments } = await supabase
-    .from('installments')
-    .select('id, amount, due_date, created_at')
-    .eq('client_id', client_id)
-    .eq('user_id', user.id)
-    .eq('status', 'pending')
-    .order('due_date', { ascending: true });
+  // 1. Busca dados da cliente (crédito existente) e dívidas pendentes anteriores para calcular conta corrente
+  const [{ data: clientData }, { data: pendingInstallments }] = await Promise.all([
+    supabase
+      .from('clients')
+      .select('id, credit_balance')
+      .eq('id', client_id)
+      .eq('user_id', user.id)
+      .single(),
+    supabase
+      .from('installments')
+      .select('id, amount, due_date, created_at')
+      .eq('client_id', client_id)
+      .eq('user_id', user.id)
+      .eq('status', 'pending')
+      .order('due_date', { ascending: true }),
+  ]);
+
+  const availableCredit = roundToCents(Number(clientData?.credit_balance) || 0);
+  const applyCredit = parsed.data.apply_credit !== false;
 
   const previousDebt = (pendingInstallments || []).reduce(
     (acc, i) => acc + Number(i.amount),
@@ -69,7 +80,17 @@ export async function createSaleAction(rawInput: SaleInput) {
     previousDebt,
     saleTotal: total_amount,
     paidAmountNow: paid_amount_now,
+    availableCredit,
+    applyCredit,
   });
+
+  if (settlement.creditApplied > 0) {
+    const formattedCredit = new Intl.NumberFormat('pt-BR', {
+      style: 'currency',
+      currency: 'BRL',
+    }).format(settlement.creditApplied);
+    finalDescription += ` (Abatido ${formattedCredit} de saldo extra)`;
+  }
 
   const saleStatus = settlement.newSaleRemaining === 0 ? 'completed' : 'pending';
 
@@ -81,7 +102,7 @@ export async function createSaleAction(rawInput: SaleInput) {
       client_id,
       description: finalDescription,
       total_amount,
-      paid_amount_now: settlement.newSalePaid,
+      paid_amount_now: roundToCents(settlement.newSalePaid + settlement.creditApplied),
       remaining_amount: settlement.newSaleRemaining,
       payment_method,
       status: saleStatus,
@@ -181,6 +202,18 @@ export async function createSaleAction(rawInput: SaleInput) {
           .eq('user_id', user.id);
       }
     }
+  }
+
+  // 6. Atualiza o saldo credor/extra da cliente se houve consumo ou geração de novo crédito
+  if (settlement.finalCreditBalance !== availableCredit) {
+    await supabase
+      .from('clients')
+      .update({
+        credit_balance: settlement.finalCreditBalance,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', client_id)
+      .eq('user_id', user.id);
   }
 
   revalidatePath('/vendas');
