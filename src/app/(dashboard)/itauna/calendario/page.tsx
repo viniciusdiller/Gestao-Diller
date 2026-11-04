@@ -336,11 +336,11 @@ export default function ItaunaCalendarioPage() {
                     }}
                     role="button"
                     tabIndex={0}
-                    className={`h-18 sm:h-22 p-1.5 sm:p-2 rounded-xl sm:rounded-2xl border transition-all duration-150 flex flex-col justify-between cursor-pointer select-none relative overflow-hidden ${
+                    className={`h-16 sm:h-20 p-1.5 sm:p-2 rounded-xl sm:rounded-2xl border transition-all duration-150 flex flex-col justify-between cursor-pointer select-none relative ${
                       isToday ? 'ring-2 ring-[#0369a1] ring-offset-1 z-10' : ''
                     } ${
                       isTurnaround
-                        ? 'bg-[linear-gradient(135deg,#f0f9ff_48%,#e2e8f0_50%,#ecfdf5_52%)] border-[#38bdf8] text-[#0f172a] hover:border-[#0284c7] shadow-xs'
+                        ? 'bg-gradient-to-br from-sky-50 via-white to-emerald-50 border-[#38bdf8] text-[#0f172a] hover:border-[#0284c7] shadow-xs'
                         : isOccupied
                         ? 'bg-amber-50/70 border-amber-200/90 text-amber-950 hover:bg-amber-100/80 active:scale-95 shadow-2xs'
                         : isCheckout
@@ -368,14 +368,9 @@ export default function ItaunaCalendarioPage() {
 
                       <div className="flex items-center gap-0.5">
                         {isTurnaround ? (
-                          <div className="flex items-center gap-0.5">
-                            <span className="text-[7px] sm:text-[8px] font-black uppercase px-1 py-0.2 rounded bg-sky-200 text-sky-900 border border-sky-300">
-                              ↑ 11h
-                            </span>
-                            <span className="text-[7px] sm:text-[8px] font-black uppercase px-1 py-0.2 rounded bg-emerald-200 text-emerald-900 border border-emerald-300">
-                              ↓ 14h
-                            </span>
-                          </div>
+                          <span className="text-[8px] sm:text-[9px] font-black uppercase px-1.5 py-0.2 rounded-md bg-[#0369a1] text-white">
+                            Troca
+                          </span>
                         ) : (
                           <>
                             {isCheckin && (
@@ -395,13 +390,13 @@ export default function ItaunaCalendarioPage() {
 
                     {/* Conteúdo Inferior: Nome do Hóspede ou Indicador Livre */}
                     {isTurnaround && info?.checkoutReserva && info?.checkinReserva ? (
-                      <div className="min-w-0 space-y-0.5 mt-auto">
-                        <div className="text-[8px] sm:text-[9px] font-bold text-sky-900 bg-sky-100/90 px-1 py-0.5 rounded border border-sky-200/60 truncate leading-none">
-                          ↑ {info.checkoutReserva.aluguel_hospedes?.nome?.split(' ')[0]}
-                        </div>
-                        <div className="text-[8px] sm:text-[9px] font-bold text-emerald-900 bg-emerald-100/90 px-1 py-0.5 rounded border border-emerald-200/60 truncate leading-none">
-                          ↓ {info.checkinReserva.aluguel_hospedes?.nome?.split(' ')[0]}
-                        </div>
+                      <div className="min-w-0 space-y-0.5">
+                        <p className="text-[8px] sm:text-[9px] font-semibold text-sky-800 truncate leading-none">
+                          ↑ Saída: {info.checkoutReserva.aluguel_hospedes?.nome?.split(' ')[0]}
+                        </p>
+                        <p className="text-[8px] sm:text-[9px] font-semibold text-emerald-800 truncate leading-none">
+                          ↓ Entr.: {info.checkinReserva.aluguel_hospedes?.nome?.split(' ')[0]}
+                        </p>
                       </div>
                     ) : isOccupied && info?.activeReserva ? (
                       <div className="min-w-0">
