@@ -120,6 +120,70 @@ describe('Caderneta de Fiado & Motor de Conta Corrente', () => {
       expect(result.newSaleRemaining).toBe(30);
       expect(result.finalOutstandingBalance).toBe(30);
     });
+
+    it('Cenário exato do usuário com saldo extra: deve 100, paga 150 -> quita e fica com 50 de crédito', () => {
+      const result = calculateSettlement({
+        previousDebt: 100,
+        saleTotal: 0,
+        paidAmountNow: 150,
+      });
+
+      expect(result.totalDueWithSale).toBe(100);
+      expect(result.amountAbatedFromPrevious).toBe(100);
+      expect(result.finalOutstandingBalance).toBe(0);
+      expect(result.surplusCreditGenerated).toBe(50);
+      expect(result.finalCreditBalance).toBe(50);
+      expect(result.isFullySettled).toBe(true);
+    });
+
+    it('Cenário de compra utilizando saldo extra: tem 50 de crédito, compra 120 -> desconta 50 e restam 70', () => {
+      const result = calculateSettlement({
+        previousDebt: 0,
+        saleTotal: 120,
+        paidAmountNow: 0,
+        availableCredit: 50,
+        applyCredit: true,
+      });
+
+      expect(result.creditApplied).toBe(50);
+      expect(result.effectiveSaleTotal).toBe(70);
+      expect(result.newSaleRemaining).toBe(70);
+      expect(result.finalOutstandingBalance).toBe(70);
+      expect(result.finalCreditBalance).toBe(0);
+    });
+
+    it('Cenário onde compra é menor que o saldo extra: tem 50 de crédito, compra 30 -> quita tudo e sobram 20', () => {
+      const result = calculateSettlement({
+        previousDebt: 0,
+        saleTotal: 30,
+        paidAmountNow: 0,
+        availableCredit: 50,
+        applyCredit: true,
+      });
+
+      expect(result.creditApplied).toBe(30);
+      expect(result.effectiveSaleTotal).toBe(0);
+      expect(result.newSaleRemaining).toBe(0);
+      expect(result.finalOutstandingBalance).toBe(0);
+      expect(result.finalCreditBalance).toBe(20);
+      expect(result.isFullySettled).toBe(true);
+    });
+
+    it('Cenário com escolha de guardar crédito: tem 50, compra 100 com applyCredit false -> mantém os 50', () => {
+      const result = calculateSettlement({
+        previousDebt: 0,
+        saleTotal: 100,
+        paidAmountNow: 40,
+        availableCredit: 50,
+        applyCredit: false,
+      });
+
+      expect(result.creditApplied).toBe(0);
+      expect(result.effectiveSaleTotal).toBe(100);
+      expect(result.newSalePaid).toBe(40);
+      expect(result.newSaleRemaining).toBe(60);
+      expect(result.finalCreditBalance).toBe(50);
+    });
   });
 
   describe('distributeFIFOAbatement (Liquidação de Dívidas Antigas)', () => {
