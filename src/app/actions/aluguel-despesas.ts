@@ -12,6 +12,9 @@ import {
 export interface GetDespesasParams {
   month?: string; // AAAA-MM
   categoria?: string;
+  page?: number;
+  pageSize?: number;
+  search?: string;
 }
 
 export async function getDespesasAction(params?: GetDespesasParams) {
@@ -21,12 +24,24 @@ export async function getDespesasAction(params?: GetDespesasParams) {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return { success: false, error: 'Não autenticado', despesas: [] };
+    return {
+      success: false,
+      error: 'Não autenticado',
+      despesas: [],
+      totalCount: 0,
+      totalPages: 1,
+      currentPage: 1,
+    };
   }
+
+  const page = Math.max(1, params?.page || 1);
+  const pageSize = params?.pageSize ? Math.max(1, params.pageSize) : undefined;
+  const search = params?.search?.trim();
 
   let query = supabase
     .from('aluguel_despesas')
-    .select(`
+    .select(
+      `
       id,
       reserva_id,
       categoria,
@@ -35,11 +50,17 @@ export async function getDespesasAction(params?: GetDespesasParams) {
       data_despesa,
       created_at,
       updated_at
-    `)
+    `,
+      { count: 'exact' }
+    )
     .eq('user_id', user.id);
 
   if (params?.categoria && params.categoria !== 'all') {
     query = query.eq('categoria', params.categoria);
+  }
+
+  if (search) {
+    query = query.ilike('descricao', `%${search}%`);
   }
 
   if (params?.month) {
@@ -56,13 +77,35 @@ export async function getDespesasAction(params?: GetDespesasParams) {
 
   query = query.order('data_despesa', { ascending: false });
 
-  const { data, error } = await query;
-
-  if (error) {
-    return { success: false, error: error.message, despesas: [] };
+  if (pageSize) {
+    const from = (page - 1) * pageSize;
+    const to = from + pageSize - 1;
+    query = query.range(from, to);
   }
 
-  return { success: true, despesas: data || [] };
+  const { data, count, error } = await query;
+
+  if (error) {
+    return {
+      success: false,
+      error: error.message,
+      despesas: [],
+      totalCount: 0,
+      totalPages: 1,
+      currentPage: page,
+    };
+  }
+
+  const totalCount = count ?? (data?.length || 0);
+  const totalPages = pageSize ? Math.ceil(totalCount / pageSize) : 1;
+
+  return {
+    success: true,
+    despesas: data || [],
+    totalCount,
+    totalPages,
+    currentPage: page,
+  };
 }
 
 export async function createDespesaAction(rawInput: CreateDespesaInput) {

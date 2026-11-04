@@ -9,20 +9,37 @@ import {
   UpdateHospedeInput,
 } from '@/lib/validations/aluguel';
 
-export async function getHospedesAction() {
+export interface GetHospedesParams {
+  page?: number;
+  pageSize?: number;
+  search?: string;
+}
+
+export async function getHospedesAction(params?: GetHospedesParams) {
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return { success: false, error: 'Não autenticado', hospedes: [] };
+    return {
+      success: false,
+      error: 'Não autenticado',
+      hospedes: [],
+      totalCount: 0,
+      totalPages: 1,
+      currentPage: 1,
+    };
   }
 
-  // Busca hóspedes com agregação de reservas
-  const { data: hospedes, error } = await supabase
+  const page = Math.max(1, params?.page || 1);
+  const pageSize = params?.pageSize ? Math.max(1, params.pageSize) : undefined;
+  const search = params?.search?.trim();
+
+  let query = supabase
     .from('aluguel_hospedes')
-    .select(`
+    .select(
+      `
       id,
       nome,
       telefone,
@@ -36,12 +53,34 @@ export async function getHospedesAction() {
         data_checkin,
         data_checkout
       )
-    `)
-    .eq('user_id', user.id)
-    .order('nome', { ascending: true });
+    `,
+      { count: 'exact' }
+    )
+    .eq('user_id', user.id);
+
+  if (search) {
+    query = query.or(`nome.ilike.%${search}%,telefone.ilike.%${search}%`);
+  }
+
+  query = query.order('nome', { ascending: true });
+
+  if (pageSize) {
+    const from = (page - 1) * pageSize;
+    const to = from + pageSize - 1;
+    query = query.range(from, to);
+  }
+
+  const { data: hospedes, count, error } = await query;
 
   if (error) {
-    return { success: false, error: error.message, hospedes: [] };
+    return {
+      success: false,
+      error: error.message,
+      hospedes: [],
+      totalCount: 0,
+      totalPages: 1,
+      currentPage: page,
+    };
   }
 
   // Processa contagem de estadias e total gasto
@@ -68,7 +107,16 @@ export async function getHospedesAction() {
     };
   });
 
-  return { success: true, hospedes: formatted };
+  const totalCount = count ?? (formatted.length || 0);
+  const totalPages = pageSize ? Math.ceil(totalCount / pageSize) : 1;
+
+  return {
+    success: true,
+    hospedes: formatted,
+    totalCount,
+    totalPages,
+    currentPage: page,
+  };
 }
 
 export async function createHospedeAction(rawInput: CreateHospedeInput) {

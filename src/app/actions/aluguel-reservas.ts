@@ -18,6 +18,9 @@ export interface GetReservasParams {
   origem?: string;
   hospedeId?: string;
   month?: string; // Formato AAAA-MM
+  page?: number;
+  pageSize?: number;
+  search?: string;
 }
 
 export async function getReservasAction(params?: GetReservasParams) {
@@ -27,12 +30,24 @@ export async function getReservasAction(params?: GetReservasParams) {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return { success: false, error: 'Não autenticado', reservas: [] };
+    return {
+      success: false,
+      error: 'Não autenticado',
+      reservas: [],
+      totalCount: 0,
+      totalPages: 1,
+      currentPage: 1,
+    };
   }
+
+  const page = Math.max(1, params?.page || 1);
+  const pageSize = params?.pageSize ? Math.max(1, params.pageSize) : undefined;
+  const search = params?.search?.trim();
 
   let query = supabase
     .from('aluguel_reservas')
-    .select(`
+    .select(
+      `
       id,
       hospede_id,
       data_checkin,
@@ -60,7 +75,9 @@ export async function getReservasAction(params?: GetReservasParams) {
         nome,
         telefone
       )
-    `)
+    `,
+      { count: 'exact' }
+    )
     .eq('user_id', user.id);
 
   if (params?.status && params.status !== 'all') {
@@ -73,6 +90,10 @@ export async function getReservasAction(params?: GetReservasParams) {
 
   if (params?.hospedeId) {
     query = query.eq('hospede_id', params.hospedeId);
+  }
+
+  if (search) {
+    query = query.ilike('observacoes', `%${search}%`);
   }
 
   if (params?.month) {
@@ -90,13 +111,35 @@ export async function getReservasAction(params?: GetReservasParams) {
 
   query = query.order('data_checkin', { ascending: false });
 
-  const { data, error } = await query;
-
-  if (error) {
-    return { success: false, error: error.message, reservas: [] };
+  if (pageSize) {
+    const from = (page - 1) * pageSize;
+    const to = from + pageSize - 1;
+    query = query.range(from, to);
   }
 
-  return { success: true, reservas: data || [] };
+  const { data, count, error } = await query;
+
+  if (error) {
+    return {
+      success: false,
+      error: error.message,
+      reservas: [],
+      totalCount: 0,
+      totalPages: 1,
+      currentPage: page,
+    };
+  }
+
+  const totalCount = count ?? (data?.length || 0);
+  const totalPages = pageSize ? Math.ceil(totalCount / pageSize) : 1;
+
+  return {
+    success: true,
+    reservas: data || [],
+    totalCount,
+    totalPages,
+    currentPage: page,
+  };
 }
 
 export async function createReservaAction(rawInput: CreateReservaInput) {
