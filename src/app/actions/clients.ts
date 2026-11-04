@@ -7,8 +7,14 @@ import {
   ClientInput,
   UpdateClientSchema,
   UpdateClientInput,
+  ClientAbatementSchema,
+  ClientAbatementInput,
 } from '@/lib/validations';
 import { sanitizePhoneForWhatsApp } from '@/lib/services/whatsapp';
+import {
+  distributeFIFOAbatement,
+  roundToCents,
+} from '@/lib/services/caderneta-calculator';
 
 export async function createClientAction(rawInput: ClientInput) {
   const parsed = ClientSchema.safeParse(rawInput);
@@ -173,15 +179,116 @@ export async function getClientsAction(params?: ClientsPaginationParams) {
     return { success: false, error: error.message, clients: [], totalCount: 0, totalPages: 1, currentPage: 1 };
   }
 
+  // Agrega saldo devedor pendente por cliente para os cards
+  const clientIds = (clients || []).map((c) => c.id);
+  const debtMap: Record<string, number> = {};
+
+  if (clientIds.length > 0) {
+    const { data: pendingDebts } = await supabase
+      .from('installments')
+      .select('client_id, amount')
+      .eq('user_id', user.id)
+      .eq('status', 'pending')
+      .in('client_id', clientIds);
+
+    (pendingDebts || []).forEach((inst) => {
+      debtMap[inst.client_id] = (debtMap[inst.client_id] || 0) + Number(inst.amount);
+    });
+  }
+
+  const clientsWithDebt = (clients || []).map((c) => ({
+    ...c,
+    outstanding_balance: roundToCents(debtMap[c.id] || 0),
+  }));
+
   const totalCount = count ?? (clients?.length || 0);
   const totalPages = pageSize ? Math.ceil(totalCount / pageSize) : 1;
 
   return {
     success: true,
-    clients: clients || [],
+    clients: clientsWithDebt,
     totalCount,
     totalPages,
     currentPage: page,
+  };
+}
+
+export async function recordClientAbatementAction(rawInput: ClientAbatementInput) {
+  const parsed = ClientAbatementSchema.safeParse(rawInput);
+  if (!parsed.success) {
+    return {
+      success: false,
+      error: parsed.error.issues[0]?.message || 'Dados inválidos para abatimento.',
+    };
+  }
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return { success: false, error: 'Sessão expirada. Faça login novamente.' };
+  }
+
+  const { client_id, amount, payment_method, notes } = parsed.data;
+
+  // Busca débitos pendentes do cliente ordenados pelo mais antigo
+  const { data: pendingInstallments, error: fetchErr } = await supabase
+    .from('installments')
+    .select('id, amount, due_date, created_at, sale_id')
+    .eq('client_id', client_id)
+    .eq('user_id', user.id)
+    .eq('status', 'pending')
+    .order('due_date', { ascending: true });
+
+  if (fetchErr || !pendingInstallments || pendingInstallments.length === 0) {
+    return { success: false, error: 'Este cliente não possui débitos pendentes em aberto.' };
+  }
+
+  const plan = distributeFIFOAbatement(
+    pendingInstallments.map((p) => ({ id: p.id, amount: Number(p.amount) })),
+    amount
+  );
+
+  for (const op of plan.operations) {
+    if (op.action === 'full') {
+      await supabase
+        .from('installments')
+        .update({
+          status: 'paid',
+          paid_at: new Date().toISOString(),
+          paid_amount: op.originalAmount,
+          payment_method,
+          notes: notes ? `${notes} (Quitação via abatimento)` : 'Quitação via abatimento',
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', op.installmentId)
+        .eq('user_id', user.id);
+    } else if (op.action === 'partial') {
+      await supabase
+        .from('installments')
+        .update({
+          amount: op.newRemainingAmount,
+          paid_amount: roundToCents(op.originalAmount - op.newRemainingAmount),
+          payment_method,
+          notes: notes ? `${notes} (Abatimento parcial)` : 'Abatimento parcial',
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', op.installmentId)
+        .eq('user_id', user.id);
+    }
+  }
+
+  revalidatePath('/clientes');
+  revalidatePath('/cobrancas');
+  revalidatePath('/vendas');
+  revalidatePath('/');
+
+  return {
+    success: true,
+    totalAbated: plan.totalAbated,
+    newTotalDebt: plan.newTotalDebt,
   };
 }
 

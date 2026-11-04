@@ -547,13 +547,18 @@ export default function CobrancasPage() {
 
             <div className="space-y-1">
               <label className="text-xs font-semibold text-[#2d251e]">
-                Valor Recebido *
+                Valor Recebido / Abatimento *
               </label>
               <CurrencyInput
                 value={payAmount}
                 onChange={setPayAmount}
                 className="bg-white font-bold"
               />
+              {payAmount > 0 && payAmount < Number(selectedToPay.amount) && (
+                <p className="text-[11px] text-amber-700 font-medium">
+                  Abatimento parcial: restará {formatCurrency(Number(selectedToPay.amount) - payAmount)} em aberto.
+                </p>
+              )}
             </div>
 
             <div className="space-y-1">

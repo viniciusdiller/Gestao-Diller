@@ -4,6 +4,8 @@ import * as React from 'react';
 import {
   ShoppingBag,
   PlusCircle,
+  Plus,
+  Trash,
   Calendar,
   Search,
   MessageCircle,
@@ -11,6 +13,10 @@ import {
   Pencil,
   Trash2,
   AlertTriangle,
+  Package,
+  CheckCircle2,
+  Clock,
+  Coins,
 } from 'lucide-react';
 import {
   getSalesAction,
@@ -33,8 +39,20 @@ import { LoadingState } from '@/components/ui/loading-state';
 import { useToast } from '@/components/ui/toast';
 import { formatCurrency, formatDateBR } from '@/lib/utils';
 import { generateInstallments, InstallmentItem } from '@/lib/services/installment-calculator';
+import {
+  calculateSettlement,
+  calculateSaleItemsTotal,
+  roundToCents,
+} from '@/lib/services/caderneta-calculator';
 import { getWhatsAppReceiptUrl } from '@/lib/services/whatsapp';
 import { PaymentMethod } from '@/lib/validations';
+
+interface SaleItemRow {
+  id: string;
+  name: string;
+  quantity: number;
+  unit_price: number;
+}
 
 export default function VendasPage() {
   const { showToast } = useToast();
@@ -64,13 +82,61 @@ export default function VendasPage() {
     setCurrentPage(1);
   }, [search, filterMethod]);
 
-  // Modal Nova Venda
+  // Modal Nova Venda & Caderneta
   const [isModalOpen, setIsModalOpen] = React.useState(false);
   const [clientId, setClientId] = React.useState('');
   const [description, setDescription] = React.useState('');
+  const [items, setItems] = React.useState<SaleItemRow[]>([
+    { id: '1', name: '', quantity: 1, unit_price: 0 },
+  ]);
   const [totalAmount, setTotalAmount] = React.useState(0);
+  const [paidAmountNow, setPaidAmountNow] = React.useState<number>(0);
   const [paymentMethod, setPaymentMethod] = React.useState<PaymentMethod>('pix');
   const [saleDate, setSaleDate] = React.useState('');
+
+  function handleAddItem() {
+    setItems((prev) => [
+      ...prev,
+      { id: Math.random().toString(36).substring(7), name: '', quantity: 1, unit_price: 0 },
+    ]);
+  }
+
+  function handleRemoveItem(id: string) {
+    if (items.length <= 1) return;
+    setItems((prev) => prev.filter((it) => it.id !== id));
+  }
+
+  function handleItemChange(
+    id: string,
+    field: 'name' | 'quantity' | 'unit_price',
+    value: string | number
+  ) {
+    setItems((prev) =>
+      prev.map((it) => {
+        if (it.id !== id) return it;
+        return { ...it, [field]: value };
+      })
+    );
+  }
+
+  // Recalcula o total somado dos itens automaticamente
+  React.useEffect(() => {
+    const hasAnyItem = items.some((it) => it.name.trim().length > 0 || it.unit_price > 0);
+    if (hasAnyItem) {
+      const calculated = calculateSaleItemsTotal(items);
+      setTotalAmount(calculated);
+    }
+  }, [items]);
+
+  // Cliente selecionado e saldo devedor anterior da caderneta
+  const selectedClient = clients.find((c) => c.id === clientId);
+  const clientPreviousDebt = Number(selectedClient?.outstanding_balance || 0);
+  const totalDueWithSale = roundToCents(clientPreviousDebt + totalAmount);
+  const settlementPreview = calculateSettlement({
+    previousDebt: clientPreviousDebt,
+    saleTotal: totalAmount,
+    paidAmountNow,
+  });
 
   // Cadastro Rápido Inline de Cliente
   const [showQuickClient, setShowQuickClient] = React.useState(false);
@@ -208,7 +274,7 @@ export default function VendasPage() {
     setSubmitting(true);
 
     if (totalAmount <= 0) {
-      setErrorMsg('Informe um valor de venda maior que zero.');
+      setErrorMsg('Informe ao menos um item com valor válido para a venda.');
       setSubmitting(false);
       return;
     }
@@ -219,14 +285,18 @@ export default function VendasPage() {
       return;
     }
 
+    const validItems = items.filter((it) => it.name.trim().length > 0);
+
     const res = await createSaleAction({
       client_id: clientId,
-      description,
+      description: description.trim() || undefined,
+      items: validItems.length > 0 ? validItems : undefined,
       total_amount: totalAmount,
+      paid_amount_now: paidAmountNow,
       payment_method: paymentMethod,
       sale_date: saleDate ? new Date(saleDate + 'T12:00:00Z').toISOString() : undefined,
       installments:
-        paymentMethod === 'fiado' && generatedInstallments.length > 0
+        paymentMethod === 'fiado' && generatedInstallments.length > 1
           ? generatedInstallments
           : undefined,
     });
@@ -235,6 +305,8 @@ export default function VendasPage() {
       setIsModalOpen(false);
       setClientId('');
       setDescription('');
+      setItems([{ id: '1', name: '', quantity: 1, unit_price: 0 }]);
+      setPaidAmountNow(0);
       setTotalAmount(0);
       setPaymentMethod('pix');
       setGeneratedInstallments([]);
@@ -461,8 +533,32 @@ export default function VendasPage() {
                       <span className="text-base font-bold text-[#977f5a]">
                         {formatCurrency(Number(sale.total_amount))}
                       </span>
+                      {Number(sale.remaining_amount || 0) > 0 ? (
+                        <div className="text-[10px] text-amber-700 font-bold mt-0.5">
+                          Falta: {formatCurrency(Number(sale.remaining_amount))}
+                        </div>
+                      ) : (
+                        <div className="text-[10px] text-emerald-600 font-medium mt-0.5">
+                          Quitado
+                        </div>
+                      )}
                     </div>
                   </div>
+
+                  {/* Lista de Peças Vendidas (se houver sale_items) */}
+                  {sale.sale_items && sale.sale_items.length > 0 && (
+                    <div className="py-2 flex flex-wrap gap-1 border-b border-[#f0e9df]">
+                      {sale.sale_items.map((it: any) => (
+                        <span
+                          key={it.id}
+                          className="inline-flex items-center text-[10px] px-2 py-0.5 rounded-md bg-[#faf6f0] text-[#766a5e] border border-[#ebdcca]"
+                        >
+                          <Package className="w-2.5 h-2.5 mr-1 text-[#977f5a]" />
+                          {it.quantity}x {it.name} ({formatCurrency(Number(it.unit_price))})
+                        </span>
+                      ))}
+                    </div>
+                  )}
 
                   {/* Ações do Card de Venda: WhatsApp, Editar e Excluir */}
                   <div className="pt-2.5 flex items-center justify-between gap-2">
@@ -602,31 +698,205 @@ export default function VendasPage() {
             )}
           </div>
 
-          {/* Descrição */}
-          <div className="space-y-1">
-            <label className="text-xs font-semibold text-[#2d251e]">
-              Descrição das Peças *
-            </label>
-            <Input
-              type="text"
-              required
-              placeholder="Ex: Conjunto ouro 18k e brinco ponto de luz"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              className="bg-white"
-            />
+          {/* Itens da Venda (Tabela Relacional) */}
+          <div className="space-y-2 pt-1">
+            <div className="flex items-center justify-between">
+              <label className="text-xs font-semibold text-[#2d251e] flex items-center gap-1.5">
+                <Package className="w-3.5 h-3.5 text-[#977f5a]" />
+                Peças da Venda *
+              </label>
+              <button
+                type="button"
+                onClick={handleAddItem}
+                className="text-[11px] font-bold text-[#977f5a] hover:underline flex items-center gap-1"
+              >
+                <Plus className="w-3 h-3" /> Adicionar Peça
+              </button>
+            </div>
+
+            <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
+              {items.map((item, idx) => {
+                const subtotal = roundToCents((Number(item.quantity) || 1) * (Number(item.unit_price) || 0));
+
+                return (
+                  <div
+                    key={item.id}
+                    className="p-2.5 rounded-xl bg-[#faf6f0] border border-[#ebdcca] space-y-2"
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <Input
+                        placeholder={`Nome da peça ${idx + 1} (ex: 1 anel dourado)`}
+                        value={item.name}
+                        onChange={(e) => handleItemChange(item.id, 'name', e.target.value)}
+                        className="h-9 text-xs bg-white font-medium"
+                      />
+                      {items.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveItem(item.id)}
+                          className="p-1.5 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors shrink-0"
+                          title="Remover peça"
+                        >
+                          <Trash className="w-3.5 h-3.5" />
+                        </button>
+                      )}
+                    </div>
+
+                    <div className="grid grid-cols-3 gap-2 items-center text-xs">
+                      <div>
+                        <label className="text-[10px] text-[#766a5e] block font-medium mb-0.5">
+                          Qtd
+                        </label>
+                        <Input
+                          type="number"
+                          min={1}
+                          value={item.quantity}
+                          onChange={(e) =>
+                            handleItemChange(item.id, 'quantity', Math.max(1, parseInt(e.target.value, 10) || 1))
+                          }
+                          className="h-8 text-xs bg-white font-semibold text-center"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-[10px] text-[#766a5e] block font-medium mb-0.5">
+                          Valor Unit.
+                        </label>
+                        <CurrencyInput
+                          value={item.unit_price}
+                          onChange={(val) => handleItemChange(item.id, 'unit_price', val)}
+                          className="h-8 text-xs bg-white font-semibold"
+                        />
+                      </div>
+                      <div className="text-right">
+                        <span className="text-[10px] text-[#766a5e] block font-medium mb-0.5">
+                          Subtotal
+                        </span>
+                        <span className="text-xs font-bold text-[#977f5a]">
+                          {formatCurrency(subtotal)}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            <div className="p-2.5 rounded-xl bg-white border border-[#dfd5c4] flex items-center justify-between text-xs">
+              <span className="font-semibold text-[#52463b]">Total Deste Pedido:</span>
+              <span className="text-sm font-extrabold text-[#977f5a]">
+                {formatCurrency(totalAmount)}
+              </span>
+            </div>
           </div>
 
-          {/* Valor Total com Máscara Bancária R$ */}
-          <div className="space-y-1">
-            <label className="text-xs font-semibold text-[#2d251e]">
-              Valor Total *
+          {/* Painel da Conta Corrente / Caderneta do Cliente */}
+          {clientId && (
+            <div className="p-3 rounded-2xl bg-[#faf6f0] border border-[#ebdcca] space-y-2">
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-[#766a5e] font-medium">Dívida anterior da cliente:</span>
+                <span className="font-bold text-[#2d251e]">
+                  {formatCurrency(clientPreviousDebt)}
+                </span>
+              </div>
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-[#766a5e] font-medium">Novo pedido atual:</span>
+                <span className="font-bold text-[#2d251e]">
+                  +{formatCurrency(totalAmount)}
+                </span>
+              </div>
+              <div className="pt-1.5 border-t border-[#ebdcca] flex items-center justify-between text-xs">
+                <span className="font-bold text-[#2d251e]">Total acumulado em aberto:</span>
+                <span className="text-sm font-black text-amber-900">
+                  {formatCurrency(totalDueWithSale)}
+                </span>
+              </div>
+            </div>
+          )}
+
+          {/* Fechamento: Quanto pagou no ato */}
+          <div className="space-y-2 pt-1">
+            <label className="text-xs font-semibold text-[#2d251e] flex items-center gap-1.5">
+              <Coins className="w-3.5 h-3.5 text-[#977f5a]" />
+              Quanto a cliente pagou na hora? *
             </label>
             <CurrencyInput
-              value={totalAmount}
-              onChange={setTotalAmount}
-              className="bg-white font-bold"
+              value={paidAmountNow}
+              onChange={setPaidAmountNow}
+              className="bg-white font-extrabold text-base"
             />
+
+            {/* Atalhos Rápidos de 1 Clique */}
+            <div className="grid grid-cols-3 gap-1.5">
+              <button
+                type="button"
+                onClick={() => setPaidAmountNow(totalDueWithSale)}
+                className="py-1.5 px-2 rounded-lg text-[10px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-200 hover:bg-emerald-100 transition-colors truncate"
+                title={`Pagar R$ ${totalDueWithSale} e quitar tudo`}
+              >
+                Já pagou tudo
+              </button>
+              <button
+                type="button"
+                onClick={() => setPaidAmountNow(totalAmount)}
+                className="py-1.5 px-2 rounded-lg text-[10px] font-bold bg-[#faf6f0] text-[#977f5a] border border-[#ebdcca] hover:bg-[#f2e7d8] transition-colors truncate"
+                title={`Pagar apenas os R$ ${totalAmount} deste pedido`}
+              >
+                Apenas o pedido
+              </button>
+              <button
+                type="button"
+                onClick={() => setPaidAmountNow(0)}
+                className="py-1.5 px-2 rounded-lg text-[10px] font-bold bg-amber-50 text-amber-900 border border-amber-200 hover:bg-amber-100 transition-colors truncate"
+              >
+                Fiado total (R$ 0)
+              </button>
+            </div>
+
+            {/* Indicador em Tempo Real do Saldo Devedor Restante */}
+            <div className="pt-1">
+              {settlementPreview.finalOutstandingBalance === 0 ? (
+                <div className="p-2.5 rounded-xl bg-emerald-50 border border-emerald-200 text-xs text-emerald-800 flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                  <div>
+                    <p className="font-bold">Conta 100% quitada!</p>
+                    <p className="text-[11px] text-emerald-700">
+                      O cliente não ficará com nenhum saldo devedor.
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                <div className="p-2.5 rounded-xl bg-amber-50 border border-amber-200 text-xs text-amber-900 flex items-center gap-2">
+                  <Clock className="w-4 h-4 text-amber-600 shrink-0" />
+                  <div>
+                    <p className="font-bold">
+                      Saldo restante a pagar:{' '}
+                      <strong>{formatCurrency(settlementPreview.finalOutstandingBalance)}</strong>
+                    </p>
+                    <p className="text-[11px] text-amber-700">
+                      O saldo em aberto permanecerá na Caderneta / Cobranças.
+                    </p>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Meio de Pagamento do Valor Pago no Ato */}
+          <div className="space-y-1">
+            <label className="text-xs font-semibold text-[#2d251e]">
+              Forma de Pagamento {paidAmountNow > 0 ? '(do valor pago)' : ''}
+            </label>
+            <select
+              value={paymentMethod}
+              onChange={(e) => setPaymentMethod(e.target.value as PaymentMethod)}
+              className="flex h-11 w-full rounded-xl border border-[#dfd5c4] bg-white px-3.5 py-2 text-xs font-medium text-[#2d251e] focus:border-[#977f5a] focus:outline-none"
+            >
+              <option value="pix">PIX</option>
+              <option value="dinheiro">Dinheiro</option>
+              <option value="cartao_debito">Cartão de Débito</option>
+              <option value="cartao_credito">Cartão de Crédito</option>
+              <option value="fiado">Fiado</option>
+            </select>
           </div>
 
           {/* Data da Venda */}
@@ -639,109 +909,12 @@ export default function VendasPage() {
               onChange={setSaleDate}
               placeholder="Selecione a data da venda..."
             />
+            {saleDate && new Date(saleDate + 'T23:59:59') < new Date() && (
+              <p className="text-[11px] text-amber-700 font-medium pt-0.5">
+                ⚡ Data retroativa: o saldo em aberto constará imediatamente na régua de cobrança.
+              </p>
+            )}
           </div>
-
-          {/* Forma de Pagamento */}
-          <div className="space-y-1">
-            <label className="text-xs font-semibold text-[#2d251e]">
-              Forma de Pagamento *
-            </label>
-            <select
-              value={paymentMethod}
-              onChange={(e) => setPaymentMethod(e.target.value as PaymentMethod)}
-              className="flex h-12 w-full rounded-xl border border-[#dfd5c4] bg-white px-3.5 py-2 text-sm text-[#2d251e] focus:border-[#977f5a] focus:outline-none"
-            >
-              <option value="pix">PIX</option>
-              <option value="dinheiro">Dinheiro</option>
-              <option value="cartao_debito">Cartão de Débito</option>
-              <option value="cartao_credito">Cartão de Crédito</option>
-              <option value="fiado">Fiado / Parcelado</option>
-            </select>
-          </div>
-
-          {/* Seção Condicional: Fiado & Parcelamento */}
-          {paymentMethod === 'fiado' && (
-            <div className="p-3.5 rounded-2xl bg-[#f5efe6] border border-[#e4dcd0] space-y-3">
-              <h4 className="text-xs font-bold text-[#2d251e] flex items-center gap-1.5 uppercase tracking-wider">
-                <Calendar className="w-3.5 h-3.5 text-[#977f5a]" /> Detalhes do Parcelamento
-              </h4>
-
-              <div className="grid grid-cols-2 gap-2.5">
-                <div className="space-y-1">
-                  <label className="text-[11px] font-medium text-[#766a5e]">
-                    Qtd. de Parcelas
-                  </label>
-                  <select
-                    value={numInstallments}
-                    onChange={(e) => setNumInstallments(Number(e.target.value))}
-                    className="flex h-10 w-full rounded-xl border border-[#dfd5c4] bg-white px-2.5 text-xs text-[#2d251e] focus:outline-none"
-                  >
-                    {[1, 2, 3, 4, 5, 6, 8, 10, 12].map((n) => (
-                      <option key={n} value={n}>
-                        {n}x {n === 1 ? '(Parcela única)' : ''}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div className="space-y-1">
-                  <label className="text-[11px] font-medium text-[#766a5e]">
-                    Periodicidade
-                  </label>
-                  <select
-                    value={intervalType}
-                    onChange={(e) =>
-                      setIntervalType(e.target.value as 'monthly' | 'biweekly' | 'weekly')
-                    }
-                    className="flex h-10 w-full rounded-xl border border-[#dfd5c4] bg-white px-2.5 text-xs text-[#2d251e] focus:outline-none"
-                  >
-                    <option value="monthly">Mensal (30 dias)</option>
-                    <option value="biweekly">Quinzenal (15 dias)</option>
-                    <option value="weekly">Semanal (7 dias)</option>
-                  </select>
-                </div>
-              </div>
-
-              <div className="space-y-1">
-                <label className="text-[11px] font-medium text-[#766a5e]">
-                  Vencimento da 1ª Parcela
-                </label>
-                <DatePicker
-                  value={firstDueDate}
-                  onChange={setFirstDueDate}
-                  placeholder="Data do 1º vencimento..."
-                  showPresets={true}
-                />
-              </div>
-
-              {/* Lista Prévia das Parcelas Calculadas */}
-              {generatedInstallments.length > 0 && (
-                <div className="space-y-1.5 pt-1">
-                  <p className="text-[10px] font-bold text-[#766a5e] uppercase">
-                    Cronograma de Vencimentos:
-                  </p>
-                  <div className="space-y-1 max-h-36 overflow-y-auto pr-1">
-                    {generatedInstallments.map((inst) => (
-                      <div
-                        key={inst.installment_number}
-                        className="flex items-center justify-between p-2 rounded-lg bg-white border border-[#ebdcca] text-xs"
-                      >
-                        <span className="font-semibold text-[#2d251e]">
-                          Parcela {inst.installment_number}/{inst.total_installments}
-                        </span>
-                        <span className="text-[#766a5e]">
-                          {formatDateBR(inst.due_date)}
-                        </span>
-                        <span className="font-bold text-[#977f5a]">
-                          {formatCurrency(inst.amount)}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
 
           <div className="pt-2">
             <Button
