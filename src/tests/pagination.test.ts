@@ -2,6 +2,9 @@ import { describe, it, expect } from 'vitest';
 import { ClientsPaginationParams } from '@/app/actions/clients';
 import { SalesPaginationParams } from '@/app/actions/sales';
 import { InstallmentsPaginationParams } from '@/app/actions/installments';
+import { GetReservasParams } from '@/app/actions/aluguel-reservas';
+import { GetHospedesParams } from '@/app/actions/aluguel-hospedes';
+import { GetDespesasParams } from '@/app/actions/aluguel-despesas';
 
 describe('Pagination Unit Tests', () => {
   describe('Page count and bounds calculation', () => {
@@ -94,6 +97,43 @@ describe('Pagination Unit Tests', () => {
       };
       expect(params.status).toBe('pending');
       expect(params.clientId).toBe('client-123');
+    });
+
+    it('accepts valid GetReservasParams with page, pageSize, status and search', () => {
+      const params: GetReservasParams = {
+        page: 2,
+        pageSize: 6,
+        status: 'confirmada',
+        origem: 'airbnb',
+        search: 'feriado',
+      };
+      expect(params.page).toBe(2);
+      expect(params.pageSize).toBe(6);
+      expect(params.status).toBe('confirmada');
+      expect(params.origem).toBe('airbnb');
+    });
+
+    it('accepts valid GetHospedesParams with page, pageSize and search', () => {
+      const params: GetHospedesParams = {
+        page: 1,
+        pageSize: 6,
+        search: 'Gabriel',
+      };
+      expect(params.page).toBe(1);
+      expect(params.pageSize).toBe(6);
+      expect(params.search).toBe('Gabriel');
+    });
+
+    it('accepts valid GetDespesasParams with page, pageSize, categoria and month', () => {
+      const params: GetDespesasParams = {
+        page: 1,
+        pageSize: 6,
+        categoria: 'energia',
+        month: '2026-11',
+      };
+      expect(params.page).toBe(1);
+      expect(params.categoria).toBe('energia');
+      expect(params.month).toBe('2026-11');
     });
   });
 
