@@ -18,7 +18,7 @@ export function WorkspaceSwitcherModal() {
     <Modal
       isOpen={isModalOpen}
       onClose={() => setIsModalOpen(false)}
-      title="Diller-Hub — Alternar Negócio"
+      title="Gestão-Diller — Alternar Negócio"
       description="Selecione qual operação você deseja gerenciar agora"
     >
       <div className="space-y-3 pt-1">

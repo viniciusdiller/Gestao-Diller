@@ -3,8 +3,8 @@ import './globals.css';
 import { ToastProvider } from '@/components/ui/toast';
 
 export const metadata: Metadata = {
-  title: 'Diller-Hub — Gestão Integrada',
-  description: 'Hub unificado de gestão financeira e operacional (Semijoias e Casa Itaúna).',
+  title: 'Gestão-Diller — Sistema Integrado',
+  description: 'Sistema integrado de gestão financeira e operacional (Semijoias e Casa Itaúna).',
   manifest: '/manifest.webmanifest',
   icons: {
     icon: [
@@ -18,7 +18,7 @@ export const metadata: Metadata = {
   appleWebApp: {
     capable: true,
     statusBarStyle: 'default',
-    title: 'Diller-Hub',
+    title: 'Gestão-Diller',
   },
 };
 

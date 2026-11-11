@@ -9,11 +9,12 @@ import {
   MessageCircle,
   ArrowRight,
   Gem,
+  Package,
 } from 'lucide-react';
 import { getDashboardDataAction } from '../actions/dashboard';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { formatCurrency, formatDateBR } from '@/lib/utils';
+import { formatCurrency, formatDateBR, cn } from '@/lib/utils';
 import { getWhatsAppBillingUrl } from '@/lib/services/whatsapp';
 
 function DashboardSkeleton() {
@@ -58,6 +59,8 @@ async function DashboardContent() {
   const totalReceivable = metrics?.totalReceivable ?? 0;
   const totalOverdue = metrics?.totalOverdue ?? 0;
   const monthSalesCount = metrics?.monthSalesCount ?? 0;
+  const monthPurchases = metrics?.monthPurchases ?? 0;
+  const netProfit = metrics?.netProfit ?? 0;
   const topClients = metrics?.topClients ?? [];
   const overdueAlerts = metrics?.overdueAlerts ?? [];
   const dueSoonAlerts = metrics?.dueSoonAlerts ?? [];
@@ -165,6 +168,60 @@ async function DashboardContent() {
           </div>
           <p className="text-[10px] sm:text-xs text-[#766a5e] mt-0.5">
             Pedidos registrados
+          </p>
+        </Card>
+      </div>
+
+      {/* Balanço Operacional do Mês: Compras de Fábrica e Lucro Líquido Real */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 lg:gap-4">
+        {/* Card Compras de Fábrica no Mês */}
+        <Link href="/compras" className="block group">
+          <Card className="p-4 bg-[#ffffff] border-[#e4dcd0] shadow-xs group-hover:border-[#977f5a] transition-all duration-200 rounded-3xl touch-card">
+            <div className="flex items-center justify-between pb-1">
+              <span className="text-[11px] sm:text-xs font-bold text-[#766a5e] uppercase tracking-wider">
+                Compras de Fábrica (Mês)
+              </span>
+              <div className="p-1.5 rounded-xl bg-amber-50 text-amber-600 group-hover:scale-105 transition-transform">
+                <Package className="w-4 h-4" />
+              </div>
+            </div>
+            <div className="text-xl sm:text-2xl font-bold text-[#2d251e] tracking-tight mt-1">
+              {formatCurrency(monthPurchases)}
+            </div>
+            <div className="flex items-center justify-between mt-1 text-[11px] text-[#977f5a] font-semibold">
+              <span>Custos de mercadoria</span>
+              <span className="inline-flex items-center gap-0.5 group-hover:translate-x-0.5 transition-transform">
+                Gerenciar compras <ArrowRight className="w-3 h-3" />
+              </span>
+            </div>
+          </Card>
+        </Link>
+
+        {/* Card Lucro Estimado Real (Vendas - Compras) */}
+        <Card className="p-4 bg-[#ffffff] border-[#e4dcd0] shadow-xs rounded-3xl touch-card">
+          <div className="flex items-center justify-between pb-1">
+            <span className="text-[11px] sm:text-xs font-bold text-[#766a5e] uppercase tracking-wider">
+              Lucro Estimado (Mês)
+            </span>
+            <div
+              className={cn(
+                'p-1.5 rounded-xl',
+                netProfit >= 0 ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'
+              )}
+            >
+              <TrendingUp className="w-4 h-4" />
+            </div>
+          </div>
+          <div
+            className={cn(
+              'text-xl sm:text-2xl font-bold tracking-tight mt-1',
+              netProfit >= 0 ? 'text-emerald-700' : 'text-rose-600'
+            )}
+          >
+            {formatCurrency(netProfit)}
+          </div>
+          <p className="text-[11px] text-[#766a5e] mt-1 truncate">
+            {formatCurrency(monthRevenue)} (vendas) - {formatCurrency(monthPurchases)} (fábricas)
           </p>
         </Card>
       </div>

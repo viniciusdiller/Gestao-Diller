@@ -2,9 +2,9 @@ import type { MetadataRoute } from 'next';
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: 'Diller-Hub — Gestão Integrada',
-    short_name: 'Diller-Hub',
-    description: 'Hub de Gestão Integrada de Negócios (Semijoias e Temporada)',
+    name: 'Gestão-Diller — Sistema Integrado',
+    short_name: 'Gestão-Diller',
+    description: 'Sistema de Gestão Integrada de Negócios (Semijoias e Temporada)',
     start_url: '/',
     display: 'standalone',
     orientation: 'portrait',

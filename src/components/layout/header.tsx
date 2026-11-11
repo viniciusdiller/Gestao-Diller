@@ -14,6 +14,7 @@ import {
   Home,
   Gem,
   ArrowLeftRight,
+  Package,
 } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { useWorkspace } from '@/contexts/workspace-context';
@@ -48,6 +49,12 @@ export function Header() {
       href: '/cobrancas',
       icon: ReceiptText,
       active: pathname.startsWith('/cobrancas'),
+    },
+    {
+      label: 'Compras',
+      href: '/compras',
+      icon: Package,
+      active: pathname.startsWith('/compras'),
     },
   ];
 
