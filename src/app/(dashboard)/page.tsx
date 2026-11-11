@@ -60,8 +60,10 @@ async function DashboardContent() {
   const totalOverdue = metrics?.totalOverdue ?? 0;
   const monthSalesCount = metrics?.monthSalesCount ?? 0;
   const monthPurchases = metrics?.monthPurchases ?? 0;
+  const allTimePurchases = metrics?.allTimePurchases ?? 0;
   const netProfit = metrics?.netProfit ?? 0;
   const topClients = metrics?.topClients ?? [];
+  const factoryPurchases = metrics?.factoryPurchases ?? [];
   const overdueAlerts = metrics?.overdueAlerts ?? [];
   const dueSoonAlerts = metrics?.dueSoonAlerts ?? [];
   const monthlyHistory = metrics?.monthlyHistory ?? [];
@@ -71,19 +73,6 @@ async function DashboardContent() {
     ...monthlyHistory.map((m) => m.total),
     100
   );
-
-  const partnerBrands = [
-    'Carol Freitas Acessórios',
-    'Amorelli',
-    'Zane',
-    'Rujah',
-    'Elos Acessórios',
-    'Ilumi',
-    'AR Folheados',
-    'Miss A',
-    'JMN Folheados',
-    'Veraneio Semijoias',
-  ];
 
   return (
     <div className="space-y-6 animate-in fade-in duration-300">
@@ -438,33 +427,60 @@ async function DashboardContent() {
           </CardContent>
         </Card>
 
-        {/* Marcas Parceiras e Estoque de Fornecedores */}
+        {/* Compras de Fábrica & Reposição de Estoque */}
         <Card className="border-[#e4dcd0] bg-[#ffffff] shadow-xs hover:shadow-md transition-all duration-200">
           <CardHeader className="p-4 pb-2">
             <div className="flex items-center justify-between">
               <CardTitle className="text-sm font-bold flex items-center gap-1.5 text-[#2d251e]">
-                <Gem className="w-4 h-4 text-[#977f5a]" /> Marcas Parceiras & Estoque
+                <Package className="w-4 h-4 text-[#977f5a]" /> Fábricas & Reposições
               </CardTitle>
-              <span className="text-[10px] font-semibold text-[#977f5a] bg-[#977f5a]/10 px-2.5 py-0.5 rounded-full">
-                Ref: 26/10
-              </span>
+              <Link
+                href="/compras"
+                className="text-[11px] font-semibold text-[#977f5a] hover:text-[#836d4b] flex items-center gap-0.5 cursor-pointer"
+              >
+                <span>Ver compras</span>
+                <ArrowRight className="w-3 h-3" />
+              </Link>
             </div>
             <p className="text-xs text-[#766a5e] pt-1">
-              Total em estoque/compras registradas:{' '}
-              <strong className="text-[#2d251e] font-bold">R$ 35.956,03</strong>
+              Total em compras registradas:{' '}
+              <strong className="text-[#2d251e] font-bold tabular-nums">
+                {formatCurrency(allTimePurchases)}
+              </strong>
             </p>
           </CardHeader>
           <CardContent className="p-4 pt-2">
-            <div className="flex flex-wrap gap-2">
-              {partnerBrands.map((brand) => (
-                <span
-                  key={brand}
-                  className="px-3 py-1.5 rounded-xl bg-[#faf6f0] border border-[#e4dcd0] text-xs font-medium text-[#52463b] hover:border-[#977f5a] hover:bg-white touch-pill transition-all cursor-pointer shadow-2xs"
+            {factoryPurchases.length === 0 ? (
+              <div className="py-6 text-center text-xs text-[#766a5e] bg-[#faf6f0]/50 rounded-2xl border border-dashed border-[#e4dcd0] space-y-2">
+                <p>Nenhuma compra de fábrica cadastrada ainda.</p>
+                <Link
+                  href="/compras"
+                  className="inline-flex items-center gap-1 text-xs font-bold text-[#977f5a] hover:underline"
                 >
-                  {brand}
-                </span>
-              ))}
-            </div>
+                  Registrar primeira compra
+                </Link>
+              </div>
+            ) : (
+              <div className="flex flex-wrap gap-2">
+                {factoryPurchases.map((factory) => (
+                  <Link
+                    key={factory.factoryName}
+                    href="/compras"
+                    className="px-3 py-1.5 rounded-xl bg-[#faf6f0] border border-[#e4dcd0] text-xs font-medium text-[#2d251e] hover:border-[#977f5a] hover:bg-white transition-all flex items-center gap-2 group cursor-pointer shadow-2xs"
+                  >
+                    <span className="font-semibold group-hover:text-[#977f5a] transition-colors truncate max-w-[140px]">
+                      {factory.factoryName}
+                    </span>
+                    <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-white text-[#766a5e] border border-[#e4dcd0]">
+                      {factory.purchasesCount} {factory.purchasesCount === 1 ? 'compra' : 'compras'}
+                    </span>
+                    <span className="text-[11px] font-bold text-[#977f5a] tabular-nums">
+                      {formatCurrency(factory.totalSpent)}
+                    </span>
+                  </Link>
+                ))}
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>

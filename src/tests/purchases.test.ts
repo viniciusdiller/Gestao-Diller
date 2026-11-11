@@ -143,8 +143,18 @@ describe('Integração de Compras no Dashboard KPI Calculator', () => {
     expect(metrics.monthRevenue).toBe(5000);
     // Compras do mês: 1500 + 800 = 2300 (outubro ignorado)
     expect(metrics.monthPurchases).toBe(2300);
+    // Total acumulado histórico: 1500 + 800 + 1000 = 3300
+    expect(metrics.allTimePurchases).toBe(3300);
     // Lucro Líquido: 5000 - 2300 = 2700
     expect(metrics.netProfit).toBe(2700);
+
+    // Fábricas agrupadas por compras reais
+    expect(metrics.factoryPurchases).toHaveLength(3);
+    expect(metrics.factoryPurchases[0]).toEqual({
+      factoryName: 'Limeira Joias',
+      totalSpent: 1500,
+      purchasesCount: 1,
+    });
   });
 
   it('lida graciosamente com ausência de compras', () => {

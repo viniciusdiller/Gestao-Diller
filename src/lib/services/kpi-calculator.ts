@@ -41,14 +41,22 @@ export interface TopClientKPI {
   salesCount: number;
 }
 
+export interface FactoryPurchaseKPI {
+  factoryName: string;
+  totalSpent: number;
+  purchasesCount: number;
+}
+
 export interface DashboardMetrics {
   monthRevenue: number;
   totalReceivable: number;
   totalOverdue: number;
   monthSalesCount: number;
   monthPurchases: number;
+  allTimePurchases: number;
   netProfit: number;
   topClients: TopClientKPI[];
+  factoryPurchases: FactoryPurchaseKPI[];
   overdueAlerts: InstallmentRecord[];
   dueSoonAlerts: InstallmentRecord[];
   monthlyHistory: MonthlyChartData[];
@@ -158,17 +166,37 @@ export function calculateDashboardMetrics(
     monthlyHistory.push({ monthKey, label, total });
   }
 
-  // 5. Total de compras do mês corrente (fábrica)
+  // 5. Total de compras (mês corrente e histórico por fábrica)
   let monthPurchases = 0;
+  let allTimePurchases = 0;
+  const factoryMap = new Map<string, { total: number; count: number }>();
+
   for (const p of purchases) {
+    const amt = Number(p.total_amount) || 0;
+    allTimePurchases += amt;
+
+    const fName = (p.factory_name || 'Fornecedor').trim();
+    const prev = factoryMap.get(fName) || { total: 0, count: 0 };
+    prev.total += amt;
+    prev.count += 1;
+    factoryMap.set(fName, prev);
+
     const pDate = new Date(p.purchase_date + 'T00:00:00Z');
     if (
       pDate.getUTCFullYear() === currentYear &&
       pDate.getUTCMonth() === currentMonth
     ) {
-      monthPurchases += Number(p.total_amount);
+      monthPurchases += amt;
     }
   }
+
+  const factoryPurchases: FactoryPurchaseKPI[] = Array.from(factoryMap.entries())
+    .map(([factoryName, data]) => ({
+      factoryName,
+      totalSpent: Math.round(data.total * 100) / 100,
+      purchasesCount: data.count,
+    }))
+    .sort((a, b) => b.totalSpent - a.totalSpent || b.purchasesCount - a.purchasesCount);
 
   const netProfit = Math.round((monthRevenue - monthPurchases) * 100) / 100;
 
@@ -178,8 +206,10 @@ export function calculateDashboardMetrics(
     totalOverdue,
     monthSalesCount,
     monthPurchases: Math.round(monthPurchases * 100) / 100,
+    allTimePurchases: Math.round(allTimePurchases * 100) / 100,
     netProfit,
     topClients,
+    factoryPurchases,
     overdueAlerts,
     dueSoonAlerts,
     monthlyHistory,
