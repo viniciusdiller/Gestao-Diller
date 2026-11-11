@@ -5,8 +5,8 @@ describe('API Route contracts and manifests', () => {
     const manifestModule = await import('@/app/manifest');
     const manifest = manifestModule.default();
 
-    expect(manifest.name).toBe('Diller-Hub — Gestão Integrada');
-    expect(manifest.short_name).toBe('Diller-Hub');
+    expect(manifest.name).toBe('Gestão-Diller — Sistema Integrado');
+    expect(manifest.short_name).toBe('Gestão-Diller');
     expect(manifest.display).toBe('standalone');
     expect(manifest.theme_color).toBe('#0f172a');
     expect(manifest.background_color).toBe('#f8fafc');
