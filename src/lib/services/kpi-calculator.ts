@@ -21,6 +21,13 @@ export interface InstallmentRecord {
   status: 'pending' | 'paid' | 'cancelled';
 }
 
+export interface PurchaseRecord {
+  id: string;
+  factory_name: string;
+  total_amount: number;
+  purchase_date: string; // YYYY-MM-DD
+}
+
 export interface MonthlyChartData {
   monthKey: string; // YYYY-MM
   label: string; // ex: "Out/26"
@@ -39,6 +46,8 @@ export interface DashboardMetrics {
   totalReceivable: number;
   totalOverdue: number;
   monthSalesCount: number;
+  monthPurchases: number;
+  netProfit: number;
   topClients: TopClientKPI[];
   overdueAlerts: InstallmentRecord[];
   dueSoonAlerts: InstallmentRecord[];
@@ -48,7 +57,8 @@ export interface DashboardMetrics {
 export function calculateDashboardMetrics(
   sales: SaleRecord[],
   installments: InstallmentRecord[],
-  referenceDateInput: Date | string = new Date()
+  referenceDateInput: Date | string = new Date(),
+  purchases: PurchaseRecord[] = []
 ): DashboardMetrics {
   const refDate =
     typeof referenceDateInput === 'string'
@@ -148,11 +158,27 @@ export function calculateDashboardMetrics(
     monthlyHistory.push({ monthKey, label, total });
   }
 
+  // 5. Total de compras do mês corrente (fábrica)
+  let monthPurchases = 0;
+  for (const p of purchases) {
+    const pDate = new Date(p.purchase_date + 'T00:00:00Z');
+    if (
+      pDate.getUTCFullYear() === currentYear &&
+      pDate.getUTCMonth() === currentMonth
+    ) {
+      monthPurchases += Number(p.total_amount);
+    }
+  }
+
+  const netProfit = Math.round((monthRevenue - monthPurchases) * 100) / 100;
+
   return {
     monthRevenue,
     totalReceivable,
     totalOverdue,
     monthSalesCount,
+    monthPurchases: Math.round(monthPurchases * 100) / 100,
+    netProfit,
     topClients,
     overdueAlerts,
     dueSoonAlerts,
