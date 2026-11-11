@@ -172,58 +172,44 @@ async function DashboardContent() {
         </Card>
       </div>
 
-      {/* Balanço Operacional do Mês: Compras de Fábrica e Lucro Líquido Real */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 lg:gap-4">
-        {/* Card Compras de Fábrica no Mês */}
-        <Link href="/compras" className="block group">
-          <Card className="p-4 bg-[#ffffff] border-[#e4dcd0] shadow-xs group-hover:border-[#977f5a] transition-all duration-200 rounded-3xl touch-card">
-            <div className="flex items-center justify-between pb-1">
-              <span className="text-[11px] sm:text-xs font-bold text-[#766a5e] uppercase tracking-wider">
-                Compras de Fábrica (Mês)
-              </span>
-              <div className="p-1.5 rounded-xl bg-amber-50 text-amber-600 group-hover:scale-105 transition-transform">
-                <Package className="w-4 h-4" />
-              </div>
-            </div>
-            <div className="text-xl sm:text-2xl font-bold text-[#2d251e] tracking-tight mt-1">
-              {formatCurrency(monthPurchases)}
-            </div>
-            <div className="flex items-center justify-between mt-1 text-[11px] text-[#977f5a] font-semibold">
-              <span>Custos de mercadoria</span>
-              <span className="inline-flex items-center gap-0.5 group-hover:translate-x-0.5 transition-transform">
-                Gerenciar compras <ArrowRight className="w-3 h-3" />
-              </span>
-            </div>
-          </Card>
-        </Link>
-
-        {/* Card Lucro Estimado Real (Vendas - Compras) */}
-        <Card className="p-4 bg-[#ffffff] border-[#e4dcd0] shadow-xs rounded-3xl touch-card">
-          <div className="flex items-center justify-between pb-1">
-            <span className="text-[11px] sm:text-xs font-bold text-[#766a5e] uppercase tracking-wider">
+      {/* Balanço Operacional do Mês: Faturamento vs Compras -> Lucro Real */}
+      <div className="bg-white rounded-2xl border border-[#e3dacd] p-4 sm:p-5 shadow-xs">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex-1">
+            <span className="text-[11px] font-semibold uppercase tracking-wider text-[#766a5e]">
               Lucro Estimado (Mês)
             </span>
             <div
               className={cn(
-                'p-1.5 rounded-xl',
-                netProfit >= 0 ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'
+                'text-2xl sm:text-3xl font-bold tracking-tight mt-1 tabular-nums',
+                netProfit >= 0 ? 'text-[#2d251e]' : 'text-rose-600'
               )}
             >
-              <TrendingUp className="w-4 h-4" />
+              {formatCurrency(netProfit)}
             </div>
+            <p className="text-xs text-[#766a5e] mt-1">
+              {formatCurrency(monthRevenue)} vendas • {formatCurrency(monthPurchases)} compras de fábrica
+            </p>
           </div>
-          <div
-            className={cn(
-              'text-xl sm:text-2xl font-bold tracking-tight mt-1',
-              netProfit >= 0 ? 'text-emerald-700' : 'text-rose-600'
-            )}
-          >
-            {formatCurrency(netProfit)}
+
+          <div className="sm:border-l sm:border-[#e3dacd] sm:pl-6 pt-3 sm:pt-0 border-t border-[#f0e9df] sm:border-t-0 flex items-center justify-between sm:justify-start gap-4">
+            <div>
+              <span className="text-[11px] font-semibold uppercase tracking-wider text-[#766a5e]">
+                Compras de Fábrica
+              </span>
+              <div className="text-lg font-bold text-[#2d251e] mt-0.5 tabular-nums">
+                {formatCurrency(monthPurchases)}
+              </div>
+            </div>
+            <Link
+              href="/compras"
+              className="px-3.5 py-1.5 rounded-xl border border-[#e3dacd] hover:border-[#977f5a] text-[#2d251e] text-xs font-semibold hover:bg-[#faf6f0] transition-colors inline-flex items-center gap-1 cursor-pointer"
+            >
+              <span>Extrato</span>
+              <ArrowRight className="w-3.5 h-3.5 text-[#977f5a]" />
+            </Link>
           </div>
-          <p className="text-[11px] text-[#766a5e] mt-1 truncate">
-            {formatCurrency(monthRevenue)} (vendas) - {formatCurrency(monthPurchases)} (fábricas)
-          </p>
-        </Card>
+        </div>
       </div>
 
       {/* Grid Médio (Alertas e Gráfico lado a lado no desktop) */}

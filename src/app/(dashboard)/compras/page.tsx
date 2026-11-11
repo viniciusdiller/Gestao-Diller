@@ -2,21 +2,17 @@
 
 import * as React from 'react';
 import {
-  Package,
-  PlusCircle,
+  Plus,
+  Search,
+  Calendar,
+  X,
+  MoreVertical,
   Pencil,
   Trash2,
-  Calendar,
-  Building2,
-  Search,
-  Sparkles,
+  Building,
+  Check,
   TrendingDown,
-  ShoppingBag,
-  FileText,
-  AlertTriangle,
 } from 'lucide-react';
-import { Card } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { CurrencyInput } from '@/components/ui/currency-input';
@@ -34,20 +30,7 @@ import {
   getDistinctFactoriesAction,
   PurchaseRow,
 } from '@/app/actions/purchases';
-import { formatCurrency, formatDateBR, getTodayDateString } from '@/lib/utils';
-
-const DEFAULT_PARTNER_FACTORIES = [
-  'Carol Freitas Acessórios',
-  'Amorelli',
-  'Zane',
-  'Rujah',
-  'Elos Acessórios',
-  'Ilumi',
-  'AR Folheados',
-  'Miss A',
-  'JMN Folheados',
-  'Veraneio Semijoias',
-];
+import { formatCurrency, formatDateBR, getTodayDateString, cn } from '@/lib/utils';
 
 export default function ComprasPage() {
   const { showToast } = useToast();
@@ -59,10 +42,10 @@ export default function ComprasPage() {
   const [totalRecords, setTotalRecords] = React.useState(0);
   const [searchTerm, setSearchTerm] = React.useState('');
 
-  // Sugestões de fábricas
-  const [knownFactories, setKnownFactories] = React.useState<string[]>(DEFAULT_PARTNER_FACTORIES);
+  // Sugestões reais (APENAS o que já foi salvo pelo usuário no banco)
+  const [registeredFactories, setRegisteredFactories] = React.useState<string[]>([]);
 
-  // Métricas do topo
+  // Métricas financeiras
   const [metrics, setMetrics] = React.useState<{
     monthTotal: number;
     monthCount: number;
@@ -86,51 +69,57 @@ export default function ComprasPage() {
   const [purchaseDate, setPurchaseDate] = React.useState(getTodayDateString());
   const [notes, setNotes] = React.useState('');
 
+  // Estado do autocomplete dinâmico
+  const [showSuggestions, setShowSuggestions] = React.useState(false);
+  const factoryInputRef = React.useRef<HTMLInputElement>(null);
+  const suggestionsRef = React.useRef<HTMLDivElement>(null);
+
   // Modal Exclusão
   const [purchaseToDelete, setPurchaseToDelete] = React.useState<PurchaseRow | null>(null);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = React.useState(false);
   const [deleting, setDeleting] = React.useState(false);
 
-  // Carregar dados
-  const loadData = React.useCallback(async (targetPage = 1, search = searchTerm) => {
-    setLoading(true);
-    try {
-      const [listRes, metricsRes, factoriesRes] = await Promise.all([
-        getPurchasesAction({ page: targetPage, limit: 12, search }),
-        getPurchasesMetricsAction(),
-        getDistinctFactoriesAction(),
-      ]);
+  // Carregar dados reais
+  const loadData = React.useCallback(
+    async (targetPage = 1, search = searchTerm) => {
+      setLoading(true);
+      try {
+        const [listRes, metricsRes, factoriesRes] = await Promise.all([
+          getPurchasesAction({ page: targetPage, limit: 15, search }),
+          getPurchasesMetricsAction(),
+          getDistinctFactoriesAction(),
+        ]);
 
-      if (listRes.success) {
-        setPurchases(listRes.purchases || []);
-        setPage(listRes.page ?? 1);
-        setTotalPages(listRes.totalPages ?? 1);
-        setTotalRecords(listRes.total ?? 0);
-      } else {
-        showToast(listRes.error || 'Erro ao carregar compras.', 'error');
-      }
+        if (listRes.success) {
+          setPurchases(listRes.purchases || []);
+          setPage(listRes.page ?? 1);
+          setTotalPages(listRes.totalPages ?? 1);
+          setTotalRecords(listRes.total ?? 0);
+        } else {
+          showToast(listRes.error || 'Erro ao carregar compras.', 'error');
+        }
 
-      if (metricsRes.success) {
-        setMetrics({
-          monthTotal: metricsRes.monthTotal,
-          monthCount: metricsRes.monthCount,
-          allTimeTotal: metricsRes.allTimeTotal,
-          topFactory: metricsRes.topFactory,
-        });
-      }
+        if (metricsRes.success) {
+          setMetrics({
+            monthTotal: metricsRes.monthTotal,
+            monthCount: metricsRes.monthCount,
+            allTimeTotal: metricsRes.allTimeTotal,
+            topFactory: metricsRes.topFactory,
+          });
+        }
 
-      if (factoriesRes.success) {
-        const merged = Array.from(
-          new Set([...factoriesRes.factories, ...DEFAULT_PARTNER_FACTORIES])
-        );
-        setKnownFactories(merged);
+        if (factoriesRes.success) {
+          // Apenas o que vem do banco real do usuário, SEM hardcoding!
+          setRegisteredFactories(factoriesRes.factories || []);
+        }
+      } catch {
+        showToast('Falha na comunicação com o servidor.', 'error');
+      } finally {
+        setLoading(false);
       }
-    } catch {
-      showToast('Falha na comunicação com o servidor.', 'error');
-    } finally {
-      setLoading(false);
-    }
-  }, [searchTerm, showToast]);
+    },
+    [searchTerm, showToast]
+  );
 
   React.useEffect(() => {
     loadData(1);
@@ -140,9 +129,34 @@ export default function ComprasPage() {
   React.useEffect(() => {
     const timer = setTimeout(() => {
       loadData(1, searchTerm);
-    }, 300);
+    }, 250);
     return () => clearTimeout(timer);
   }, [searchTerm, loadData]);
+
+  // Fechar dropdown de sugestões ao clicar fora
+  React.useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (
+        suggestionsRef.current &&
+        !suggestionsRef.current.contains(event.target as Node) &&
+        factoryInputRef.current &&
+        !factoryInputRef.current.contains(event.target as Node)
+      ) {
+        setShowSuggestions(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  // Filtra as sugestões do histórico conforme o que está sendo digitado
+  const matchingSuggestions = React.useMemo(() => {
+    const trimmed = factoryName.trim().toLowerCase();
+    if (!trimmed) return [];
+    return registeredFactories.filter(
+      (f) => f.toLowerCase().includes(trimmed) && f.toLowerCase() !== trimmed
+    );
+  }, [factoryName, registeredFactories]);
 
   function handleOpenNewModal() {
     setEditingPurchase(null);
@@ -150,6 +164,7 @@ export default function ComprasPage() {
     setTotalAmount(0);
     setPurchaseDate(getTodayDateString());
     setNotes('');
+    setShowSuggestions(false);
     setIsModalOpen(true);
   }
 
@@ -159,19 +174,26 @@ export default function ComprasPage() {
     setTotalAmount(Number(p.total_amount));
     setPurchaseDate(p.purchase_date);
     setNotes(p.notes || '');
+    setShowSuggestions(false);
     setIsModalOpen(true);
+  }
+
+  function handleSelectSuggestion(selected: string) {
+    setFactoryName(selected);
+    setShowSuggestions(false);
   }
 
   async function handleSavePurchase(e: React.FormEvent) {
     e.preventDefault();
 
-    if (!factoryName.trim()) {
-      showToast('Informe o nome da fábrica ou fornecedor.', 'error');
+    const cleanFactory = factoryName.trim();
+    if (!cleanFactory) {
+      showToast('Digite o nome da fábrica ou fornecedor.', 'error');
       return;
     }
 
     if (totalAmount <= 0) {
-      showToast('O valor total da compra deve ser maior que zero.', 'error');
+      showToast('Informe o valor total da compra.', 'error');
       return;
     }
 
@@ -180,37 +202,37 @@ export default function ComprasPage() {
       if (editingPurchase) {
         const res = await updatePurchaseAction({
           id: editingPurchase.id,
-          factory_name: factoryName.trim(),
+          factory_name: cleanFactory,
           total_amount: totalAmount,
           purchase_date: purchaseDate,
           notes: notes.trim() || null,
         });
 
         if (res.success) {
-          showToast('Compra atualizada com sucesso!', 'success');
+          showToast('Registro de compra atualizado.', 'success');
           setIsModalOpen(false);
           loadData(page);
         } else {
-          showToast(res.error || 'Erro ao atualizar compra.', 'error');
+          showToast(res.error || 'Não foi possível atualizar a compra.', 'error');
         }
       } else {
         const res = await createPurchaseAction({
-          factory_name: factoryName.trim(),
+          factory_name: cleanFactory,
           total_amount: totalAmount,
           purchase_date: purchaseDate,
           notes: notes.trim() || null,
         });
 
         if (res.success) {
-          showToast('Compra de fábrica registrada com sucesso!', 'success');
+          showToast('Compra registrada com sucesso!', 'success');
           setIsModalOpen(false);
           loadData(1);
         } else {
-          showToast(res.error || 'Erro ao registrar compra.', 'error');
+          showToast(res.error || 'Não foi possível registrar a compra.', 'error');
         }
       }
     } catch {
-      showToast('Falha na comunicação com o servidor.', 'error');
+      showToast('Erro de conexão ao salvar compra.', 'error');
     } finally {
       setSubmitting(false);
     }
@@ -227,241 +249,200 @@ export default function ComprasPage() {
     try {
       const res = await deletePurchaseAction(purchaseToDelete.id);
       if (res.success) {
-        showToast('Compra excluída com sucesso.', 'success');
+        showToast('Compra removida do sistema.', 'success');
         setIsDeleteModalOpen(false);
         setPurchaseToDelete(null);
         loadData(page);
       } else {
-        showToast(res.error || 'Erro ao excluir compra.', 'error');
+        showToast(res.error || 'Erro ao remover compra.', 'error');
       }
     } catch {
-      showToast('Falha ao excluir compra.', 'error');
+      showToast('Erro ao remover compra.', 'error');
     } finally {
       setDeleting(false);
     }
   }
 
   return (
-    <div className="space-y-4 pb-20">
-      {/* Cabeçalho da Página */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+    <div className="max-w-3xl mx-auto space-y-6 pb-24">
+      {/* Cabeçalho Limpo e Direto */}
+      <div className="flex items-center justify-between pt-1">
         <div>
-          <div className="flex items-center gap-2">
-            <div className="p-2 rounded-2xl bg-[#977f5a]/15 text-[#977f5a]">
-              <Package className="w-5 h-5 stroke-[2.2]" />
-            </div>
-            <div>
-              <h1 className="text-xl sm:text-2xl font-black text-[#2d251e] tracking-tight">
-                Compras de Fábrica
-              </h1>
-              <p className="text-xs text-[#766a5e] mt-0.5">
-                Controle de aquisição e reposição de mercadoria no atacado
-              </p>
-            </div>
-          </div>
+          <h1 className="text-2xl font-bold tracking-tight text-[#2d251e]">
+            Compras
+          </h1>
+          <p className="text-xs text-[#766a5e] mt-0.5">
+            Reposições de mercadoria e custos de fornecedores
+          </p>
         </div>
 
-        <Button
+        <button
           onClick={handleOpenNewModal}
-          className="bg-[#977f5a] hover:bg-[#836d4b] text-white rounded-2xl px-4 py-2.5 flex items-center justify-center gap-2 shadow-sm touch-pill cursor-pointer font-bold text-sm"
+          className="h-10 px-4 rounded-xl bg-[#2d251e] hover:bg-[#1f1914] text-white text-xs font-semibold flex items-center gap-1.5 transition-all active:scale-95 shadow-sm cursor-pointer"
         >
-          <PlusCircle className="w-4 h-4 stroke-[2.5]" />
+          <Plus className="w-4 h-4 stroke-[2.5]" />
           <span>Nova Compra</span>
-        </Button>
+        </button>
       </div>
 
-      {/* Cards de Métricas Rápidas */}
-      <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
-        {/* Card 1: Total Comprado no Mês */}
-        <Card className="p-4 rounded-3xl bg-white border-[#dfd5c4] shadow-xs">
-          <div className="flex items-center justify-between text-[#766a5e] mb-1">
-            <span className="text-[11px] font-bold uppercase tracking-wider">
-              Compras do Mês
+      {/* Painel de Resumo Financeiro Elegante */}
+      <div className="bg-white rounded-2xl border border-[#e3dacd] p-5 shadow-xs">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <span className="text-[11px] font-semibold tracking-wider uppercase text-[#766a5e]">
+              Total Comprado no Mês
             </span>
-            <div className="p-1.5 rounded-xl bg-amber-50 text-amber-600">
-              <TrendingDown className="w-4 h-4" />
+            <div className="text-3xl font-bold tracking-tight text-[#2d251e] mt-1 tabular-nums">
+              {formatCurrency(metrics.monthTotal)}
             </div>
+            <p className="text-xs text-[#766a5e] mt-1">
+              {metrics.monthCount === 0
+                ? 'Nenhuma compra registrada neste mês'
+                : `${metrics.monthCount} ${metrics.monthCount === 1 ? 'pedido registrado' : 'pedidos registrados'}`}
+            </p>
           </div>
-          <div className="text-xl sm:text-2xl font-black text-[#2d251e] tracking-tight">
-            {formatCurrency(metrics.monthTotal)}
-          </div>
-          <p className="text-[11px] text-[#766a5e] mt-0.5">
-            {metrics.monthCount} {metrics.monthCount === 1 ? 'pedido' : 'pedidos'} neste mês
-          </p>
-        </Card>
 
-        {/* Card 2: Principal Fábrica / Fornecedor */}
-        <Card className="p-4 rounded-3xl bg-white border-[#dfd5c4] shadow-xs">
-          <div className="flex items-center justify-between text-[#766a5e] mb-1">
-            <span className="text-[11px] font-bold uppercase tracking-wider">
-              Principal Fornecedor
-            </span>
-            <div className="p-1.5 rounded-xl bg-[#faf6f0] text-[#977f5a]">
-              <Building2 className="w-4 h-4" />
+          {metrics.topFactory && (
+            <div className="sm:border-l sm:border-[#e3dacd] sm:pl-6 pt-3 sm:pt-0 border-t border-[#f0e9df] sm:border-t-0">
+              <span className="text-[11px] font-semibold tracking-wider uppercase text-[#766a5e]">
+                Maior Fornecedor
+              </span>
+              <div className="text-base font-bold text-[#2d251e] mt-1 truncate max-w-[200px]">
+                {metrics.topFactory.name}
+              </div>
+              <p className="text-xs text-[#766a5e] mt-0.5 tabular-nums">
+                {formatCurrency(metrics.topFactory.total)} acumulados
+              </p>
             </div>
-          </div>
-          <div className="text-base sm:text-lg font-black text-[#2d251e] truncate tracking-tight">
-            {metrics.topFactory ? metrics.topFactory.name : 'Nenhum'}
-          </div>
-          <p className="text-[11px] text-[#766a5e] mt-0.5">
-            {metrics.topFactory ? `${formatCurrency(metrics.topFactory.total)} acumulados` : 'Sem registros'}
-          </p>
-        </Card>
-
-        {/* Card 3: Total Histórico Acumulado (visível em telas maiores ou col-span-2 no mobile) */}
-        <Card className="p-4 rounded-3xl bg-white border-[#dfd5c4] shadow-xs col-span-2 lg:col-span-1">
-          <div className="flex items-center justify-between text-[#766a5e] mb-1">
-            <span className="text-[11px] font-bold uppercase tracking-wider">
-              Total Histórico
-            </span>
-            <div className="p-1.5 rounded-xl bg-slate-50 text-slate-600">
-              <ShoppingBag className="w-4 h-4" />
-            </div>
-          </div>
-          <div className="text-xl sm:text-2xl font-black text-[#2d251e] tracking-tight">
-            {formatCurrency(metrics.allTimeTotal)}
-          </div>
-          <p className="text-[11px] text-[#766a5e] mt-0.5">
-            Soma de todas as reposições cadastradas
-          </p>
-        </Card>
+          )}
+        </div>
       </div>
 
-      {/* Barra de Busca */}
+      {/* Barra de Busca Minimalista */}
       <div className="relative">
         <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-[#87786b]" />
-        <Input
+        <input
           type="text"
-          placeholder="Buscar por fábrica ou fornecedor..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
-          className="pl-10 h-11 bg-white rounded-2xl border-[#dfd5c4] focus:border-[#977f5a] text-sm text-[#2d251e]"
+          placeholder="Filtrar por nome de fábrica ou observação..."
+          className="w-full h-11 pl-10 pr-9 text-xs sm:text-sm bg-white border border-[#e3dacd] rounded-xl text-[#2d251e] placeholder:text-[#87786b] focus:outline-none focus:border-[#977f5a] focus:ring-1 focus:ring-[#977f5a] transition-all"
         />
         {searchTerm && (
           <button
             onClick={() => setSearchTerm('')}
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-[#87786b] hover:text-[#2d251e] p-1 cursor-pointer"
+            className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-[#87786b] hover:text-[#2d251e] rounded-md transition-colors"
           >
-            Limpar
+            <X className="w-3.5 h-3.5" />
           </button>
         )}
       </div>
 
-      {/* Lista de Compras */}
+      {/* Extrato / Lista de Compras */}
       {loading ? (
-        <LoadingState message="Carregando compras de fábrica..." />
+        <LoadingState message="Carregando extrato de compras..." />
       ) : purchases.length === 0 ? (
-        <Card className="p-8 text-center rounded-3xl border-dashed border-2 border-[#dfd5c4] bg-[#faf6f0]/50 space-y-3">
-          <div className="w-12 h-12 mx-auto rounded-2xl bg-[#977f5a]/10 flex items-center justify-center text-[#977f5a]">
-            <Package className="w-6 h-6 stroke-[2]" />
+        <div className="text-center py-16 px-4 bg-white rounded-2xl border border-dashed border-[#e3dacd]">
+          <div className="w-10 h-10 rounded-xl bg-[#faf6f0] text-[#766a5e] mx-auto flex items-center justify-center mb-3">
+            <Building className="w-5 h-5 stroke-[1.8]" />
           </div>
-          <div>
-            <h3 className="text-sm font-bold text-[#2d251e]">
-              Nenhuma compra de fábrica encontrada
-            </h3>
-            <p className="text-xs text-[#766a5e] mt-1 max-w-xs mx-auto">
-              {searchTerm
-                ? 'Nenhum resultado para a busca. Tente outro termo.'
-                : 'Cadastre suas reposições e compras no atacado para controlar seus custos e calcular o lucro real.'}
-            </p>
-          </div>
+          <h3 className="text-sm font-semibold text-[#2d251e]">
+            {searchTerm ? 'Nenhuma compra encontrada' : 'Nenhuma compra cadastrada'}
+          </h3>
+          <p className="text-xs text-[#766a5e] mt-1 max-w-sm mx-auto">
+            {searchTerm
+              ? 'Tente buscar por outro termo ou limpe o filtro.'
+              : 'Clique em "Nova Compra" para registrar seu primeiro pedido de fábrica.'}
+          </p>
           {!searchTerm && (
-            <Button
+            <button
               onClick={handleOpenNewModal}
-              className="bg-[#977f5a] hover:bg-[#836d4b] text-white text-xs font-bold px-4 py-2 rounded-xl shadow-xs cursor-pointer inline-flex items-center gap-1.5"
+              className="mt-4 px-4 py-2 rounded-xl bg-[#977f5a] hover:bg-[#836d4b] text-white text-xs font-semibold transition-colors cursor-pointer"
             >
-              <PlusCircle className="w-3.5 h-3.5" />
-              <span>Registrar Primeira Compra</span>
-            </Button>
+              Adicionar Compra
+            </button>
           )}
-        </Card>
+        </div>
       ) : (
-        <div className="space-y-2.5">
-          {purchases.map((p) => (
-            <Card
-              key={p.id}
-              className="p-3.5 sm:p-4 rounded-3xl bg-white border-[#dfd5c4] shadow-xs hover:border-[#977f5a]/50 transition-all"
+        <div className="bg-white rounded-2xl border border-[#e3dacd] overflow-hidden shadow-xs divide-y divide-[#f0e9df]">
+          {purchases.map((purchase) => (
+            <div
+              key={purchase.id}
+              className="p-4 flex items-center justify-between gap-3 hover:bg-[#faf6f0]/50 transition-colors"
             >
-              <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0 flex-1 space-y-1">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="font-bold text-sm sm:text-base text-[#2d251e] truncate">
-                      {p.factory_name}
-                    </span>
-                    <Badge className="bg-[#faf6f0] text-[#977f5a] border-[#e3dacd] text-[10px] font-bold">
-                      Fábrica
-                    </Badge>
-                  </div>
+              {/* Informações da Fábrica e Data */}
+              <div className="min-w-0 flex-1 space-y-1">
+                <div className="flex items-center gap-2">
+                  <h4 className="text-sm font-semibold text-[#2d251e] truncate">
+                    {purchase.factory_name}
+                  </h4>
+                </div>
 
-                  <div className="flex items-center gap-3 text-xs text-[#766a5e] flex-wrap">
-                    <span className="flex items-center gap-1">
-                      <Calendar className="w-3.5 h-3.5 opacity-70" />
-                      {formatDateBR(p.purchase_date)}
-                    </span>
-                  </div>
-
-                  {p.notes && (
-                    <p className="text-xs text-[#64748b] bg-slate-50 p-2 rounded-xl border border-slate-100 flex items-start gap-1.5 mt-1.5">
-                      <FileText className="w-3.5 h-3.5 text-slate-400 shrink-0 mt-0.5" />
-                      <span className="line-clamp-2">{p.notes}</span>
-                    </p>
+                <div className="flex items-center gap-2 text-xs text-[#766a5e]">
+                  <span>{formatDateBR(purchase.purchase_date)}</span>
+                  {purchase.notes && (
+                    <>
+                      <span>•</span>
+                      <span className="truncate max-w-[240px] text-[#87786b]">
+                        {purchase.notes}
+                      </span>
+                    </>
                   )}
                 </div>
+              </div>
 
-                <div className="flex flex-col items-end justify-between gap-2 shrink-0">
-                  <div className="text-right">
-                    <span className="text-base sm:text-lg font-black text-[#2d251e] tracking-tight">
-                      {formatCurrency(Number(p.total_amount))}
-                    </span>
-                  </div>
+              {/* Valor e Ações */}
+              <div className="flex items-center gap-4 shrink-0">
+                <div className="text-right">
+                  <span className="text-sm sm:text-base font-bold text-[#2d251e] tabular-nums">
+                    {formatCurrency(Number(purchase.total_amount))}
+                  </span>
+                </div>
 
-                  <div className="flex items-center gap-1">
-                    <button
-                      onClick={() => handleOpenEditModal(p)}
-                      className="p-1.5 rounded-xl text-[#766a5e] hover:text-[#977f5a] hover:bg-[#faf6f0] transition-colors cursor-pointer"
-                      title="Editar compra"
-                      aria-label="Editar"
-                    >
-                      <Pencil className="w-4 h-4" />
-                    </button>
-                    <button
-                      onClick={() => handleConfirmDelete(p)}
-                      className="p-1.5 rounded-xl text-[#766a5e] hover:text-[#b91c1c] hover:bg-rose-50 transition-colors cursor-pointer"
-                      title="Excluir compra"
-                      aria-label="Excluir"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </div>
+                <div className="flex items-center gap-1">
+                  <button
+                    onClick={() => handleOpenEditModal(purchase)}
+                    className="p-1.5 text-[#87786b] hover:text-[#2d251e] hover:bg-[#faf6f0] rounded-lg transition-colors cursor-pointer"
+                    title="Editar"
+                  >
+                    <Pencil className="w-3.5 h-3.5" />
+                  </button>
+                  <button
+                    onClick={() => handleConfirmDelete(purchase)}
+                    className="p-1.5 text-[#87786b] hover:text-[#b91c1c] hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
+                    title="Excluir"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
                 </div>
               </div>
-            </Card>
-          ))}
-
-          {/* Paginação */}
-          {totalPages > 1 && (
-            <div className="pt-2">
-              <Pagination
-                currentPage={page}
-                totalPages={totalPages}
-                onPageChange={(p) => loadData(p)}
-              />
             </div>
-          )}
+          ))}
         </div>
       )}
 
-      {/* Modal de Nova / Edição de Compra */}
+      {/* Paginação */}
+      {totalPages > 1 && (
+        <div className="pt-2">
+          <Pagination
+            currentPage={page}
+            totalPages={totalPages}
+            onPageChange={(p) => loadData(p)}
+          />
+        </div>
+      )}
+
+      {/* Modal: Formulário de Nova / Edição de Compra */}
       <Modal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
-        title={editingPurchase ? 'Editar Compra de Fábrica' : 'Nova Compra de Fábrica'}
-        description="Registre as informações do pedido ou reposição de mercadoria no atacado."
+        title={editingPurchase ? 'Editar Compra' : 'Registrar Compra'}
+        description="Preencha os dados do pedido de fábrica."
       >
         <form onSubmit={handleSavePurchase} className="space-y-4 pt-1">
-          {/* Campo Data da Compra */}
+          {/* Campo Data */}
           <div>
-            <label className="block text-xs font-bold text-[#2d251e] mb-1">
+            <label className="block text-xs font-semibold text-[#2d251e] mb-1">
               Data da Compra *
             </label>
             <DatePicker
@@ -470,41 +451,50 @@ export default function ComprasPage() {
             />
           </div>
 
-          {/* Campo Fábrica / Fornecedor */}
-          <div>
-            <label className="block text-xs font-bold text-[#2d251e] mb-1">
+          {/* Campo Fábrica com Autocomplete Reativo ao Histórico */}
+          <div className="relative">
+            <label className="block text-xs font-semibold text-[#2d251e] mb-1">
               Fábrica / Fornecedor *
             </label>
-            <Input
+            <input
+              ref={factoryInputRef}
               type="text"
-              list="known-factories-list"
-              placeholder="Ex: Limeira Joias, Fornecedor X, Atacado Pratas"
-              value={factoryName}
-              onChange={(e) => setFactoryName(e.target.value)}
-              className="h-11 rounded-2xl border-[#dfd5c4] focus:border-[#977f5a]"
               required
+              placeholder="Digite o nome da fábrica..."
+              value={factoryName}
+              autoComplete="off"
+              onFocus={() => {
+                if (factoryName.trim() && matchingSuggestions.length > 0) {
+                  setShowSuggestions(true);
+                }
+              }}
+              onChange={(e) => {
+                setFactoryName(e.target.value);
+                setShowSuggestions(true);
+              }}
+              className="w-full h-11 px-3 text-sm bg-white border border-[#e3dacd] rounded-xl text-[#2d251e] placeholder:text-[#87786b] focus:outline-none focus:border-[#977f5a] focus:ring-1 focus:ring-[#977f5a] transition-all"
             />
-            {/* Datalist para Autocomplete Nativo */}
-            {knownFactories.length > 0 && (
-              <datalist id="known-factories-list">
-                {knownFactories.map((fac) => (
-                  <option key={fac} value={fac} />
-                ))}
-              </datalist>
-            )}
 
-            {/* Chips de seleção rápida caso existam fábricas cadastradas */}
-            {knownFactories.length > 0 && (
-              <div className="flex items-center gap-1.5 flex-wrap mt-2">
-                <span className="text-[10px] text-[#766a5e] font-semibold">Recentes:</span>
-                {knownFactories.slice(0, 4).map((fac) => (
+            {/* Popover de Sugestões: Aparece SOMENTE quando houver fábricas já cadastradas correspondentes */}
+            {showSuggestions && matchingSuggestions.length > 0 && (
+              <div
+                ref={suggestionsRef}
+                className="absolute left-0 right-0 top-full mt-1 bg-white border border-[#e3dacd] rounded-xl shadow-lg z-30 max-h-48 overflow-y-auto divide-y divide-[#f0e9df] animate-in fade-in duration-150"
+              >
+                <div className="px-3 py-1.5 bg-[#faf6f0] text-[10px] font-semibold text-[#766a5e] uppercase tracking-wider">
+                  Fábricas cadastradas anteriormente:
+                </div>
+                {matchingSuggestions.map((suggestion) => (
                   <button
-                    key={fac}
+                    key={suggestion}
                     type="button"
-                    onClick={() => setFactoryName(fac)}
-                    className="text-[10px] px-2 py-0.5 rounded-full bg-[#faf6f0] border border-[#dfd5c4] text-[#766a5e] hover:border-[#977f5a] hover:text-[#977f5a] cursor-pointer transition-colors"
+                    onClick={() => handleSelectSuggestion(suggestion)}
+                    className="w-full px-3 py-2 text-left text-xs text-[#2d251e] hover:bg-[#faf6f0] flex items-center justify-between group cursor-pointer transition-colors"
                   >
-                    {fac}
+                    <span className="font-medium">{suggestion}</span>
+                    <span className="text-[10px] text-[#977f5a] opacity-0 group-hover:opacity-100 transition-opacity">
+                      Selecionar
+                    </span>
                   </button>
                 ))}
               </div>
@@ -513,92 +503,91 @@ export default function ComprasPage() {
 
           {/* Campo Valor Total */}
           <div>
-            <label className="block text-xs font-bold text-[#2d251e] mb-1">
-              Valor Total da Compra (R$) *
+            <label className="block text-xs font-semibold text-[#2d251e] mb-1">
+              Valor Total (R$) *
             </label>
             <CurrencyInput
               value={totalAmount}
               onChange={(v) => setTotalAmount(v)}
-              className="h-11 rounded-2xl border-[#dfd5c4] focus:border-[#977f5a] text-lg font-bold"
+              className="h-11 rounded-xl border-[#e3dacd] focus:border-[#977f5a] text-lg font-bold text-[#2d251e]"
             />
           </div>
 
-          {/* Campo Observações */}
+          {/* Campo Observações Opcional */}
           <div>
-            <label className="block text-xs font-bold text-[#2d251e] mb-1">
-              Observações / Detalhes das Peças (Opcional)
+            <label className="block text-xs font-semibold text-[#2d251e] mb-1">
+              Observações / Peças (Opcional)
             </label>
-            <Input
+            <input
               type="text"
-              placeholder="Ex: 40 anéis banhados, 20 correntes 18k, NF 1234"
+              placeholder="Ex: 30 brincos ponto de luz, 15 gargantilhas"
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
-              className="h-11 rounded-2xl border-[#dfd5c4] focus:border-[#977f5a]"
+              className="w-full h-11 px-3 text-xs bg-white border border-[#e3dacd] rounded-xl text-[#2d251e] placeholder:text-[#87786b] focus:outline-none focus:border-[#977f5a] focus:ring-1 focus:ring-[#977f5a] transition-all"
             />
           </div>
 
-          {/* Botões do Modal */}
+          {/* Ações do Modal */}
           <div className="flex items-center justify-end gap-2 pt-2">
-            <Button
+            <button
               type="button"
-              variant="outline"
               onClick={() => setIsModalOpen(false)}
-              className="rounded-2xl border-[#dfd5c4] text-[#766a5e] cursor-pointer text-xs"
               disabled={submitting}
+              className="px-4 py-2 rounded-xl text-xs font-semibold text-[#766a5e] hover:bg-[#faf6f0] transition-colors cursor-pointer"
             >
               Cancelar
-            </Button>
-            <Button
+            </button>
+            <button
               type="submit"
               disabled={submitting}
-              className="bg-[#977f5a] hover:bg-[#836d4b] text-white rounded-2xl px-5 text-xs font-bold cursor-pointer shadow-xs"
+              className="px-5 py-2.5 rounded-xl bg-[#2d251e] hover:bg-[#1f1914] text-white text-xs font-bold transition-all shadow-sm cursor-pointer disabled:opacity-50"
             >
-              {submitting ? 'Salvando...' : editingPurchase ? 'Salvar Alterações' : 'Registrar Compra'}
-            </Button>
+              {submitting
+                ? 'Salvando...'
+                : editingPurchase
+                ? 'Salvar Alterações'
+                : 'Salvar Compra'}
+            </button>
           </div>
         </form>
       </Modal>
 
-      {/* Modal de Exclusão */}
+      {/* Modal: Confirmar Exclusão */}
       <Modal
         isOpen={isDeleteModalOpen}
         onClose={() => setIsDeleteModalOpen(false)}
-        title="Excluir Registro de Compra"
-        description="Tem certeza que deseja excluir esta compra? Esta ação não pode ser desfeita."
+        title="Excluir Compra"
+        description="Esta ação removerá o registro financeiro desta compra."
       >
         <div className="space-y-4 pt-1">
           {purchaseToDelete && (
-            <div className="p-3 bg-rose-50 border border-rose-100 rounded-2xl text-xs space-y-1 text-rose-900">
-              <p>
-                <strong className="font-bold">Fábrica:</strong> {purchaseToDelete.factory_name}
+            <div className="p-3.5 bg-[#faf6f0] border border-[#e3dacd] rounded-xl text-xs space-y-1">
+              <p className="font-semibold text-[#2d251e]">
+                {purchaseToDelete.factory_name}
               </p>
-              <p>
-                <strong className="font-bold">Data:</strong> {formatDateBR(purchaseToDelete.purchase_date)}
-              </p>
-              <p>
-                <strong className="font-bold">Valor:</strong> {formatCurrency(Number(purchaseToDelete.total_amount))}
+              <p className="text-[#766a5e]">
+                {formatDateBR(purchaseToDelete.purchase_date)} • {formatCurrency(Number(purchaseToDelete.total_amount))}
               </p>
             </div>
           )}
 
           <div className="flex items-center justify-end gap-2">
-            <Button
+            <button
               type="button"
-              variant="outline"
               onClick={() => setIsDeleteModalOpen(false)}
-              className="rounded-2xl border-[#dfd5c4] text-[#766a5e] text-xs cursor-pointer"
               disabled={deleting}
+              className="px-4 py-2 rounded-xl text-xs font-semibold text-[#766a5e] hover:bg-[#faf6f0] transition-colors cursor-pointer"
             >
               Cancelar
-            </Button>
-            <Button
+            </button>
+            <button
               type="button"
               onClick={handleDeletePurchase}
               disabled={deleting}
-              className="bg-[#b91c1c] hover:bg-rose-700 text-white rounded-2xl px-4 text-xs font-bold cursor-pointer shadow-xs"
+              className="px-4 py-2 rounded-xl bg-[#b91c1c] hover:bg-rose-700 text-white text-xs font-bold transition-colors cursor-pointer shadow-sm"
             >
-              {deleting ? 'Excluindo...' : 'Sim, Excluir Compra'}
-            </Button>
+              {deleting ? 'Excluindo...' : 'Confirmar Exclusão'}
+            </button>
           </div>
         </div>
       </Modal>
