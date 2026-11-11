@@ -52,6 +52,12 @@ export async function getDashboardDataAction() {
     `)
     .eq('user_id', user.id);
 
+  // 3. Compras de Fábrica
+  const { data: purchasesRaw } = await supabase
+    .from('purchases')
+    .select('id, factory_name, total_amount, purchase_date')
+    .eq('user_id', user.id);
+
   // Mapeia para formatos tipados
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const sales: SaleRecord[] = (salesRaw || []).map((s: any) => ({
@@ -78,7 +84,15 @@ export async function getDashboardDataAction() {
     status: i.status,
   }));
 
-  const metrics = calculateDashboardMetrics(sales, installments, new Date());
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const purchases = (purchasesRaw || []).map((p: any) => ({
+    id: p.id,
+    factory_name: p.factory_name,
+    total_amount: Number(p.total_amount),
+    purchase_date: p.purchase_date,
+  }));
+
+  const metrics = calculateDashboardMetrics(sales, installments, new Date(), purchases);
 
   return {
     success: true,

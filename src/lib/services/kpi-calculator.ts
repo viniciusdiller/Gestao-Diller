@@ -21,6 +21,13 @@ export interface InstallmentRecord {
   status: 'pending' | 'paid' | 'cancelled';
 }
 
+export interface PurchaseRecord {
+  id: string;
+  factory_name: string;
+  total_amount: number;
+  purchase_date: string; // YYYY-MM-DD
+}
+
 export interface MonthlyChartData {
   monthKey: string; // YYYY-MM
   label: string; // ex: "Out/26"
@@ -34,12 +41,22 @@ export interface TopClientKPI {
   salesCount: number;
 }
 
+export interface FactoryPurchaseKPI {
+  factoryName: string;
+  totalSpent: number;
+  purchasesCount: number;
+}
+
 export interface DashboardMetrics {
   monthRevenue: number;
   totalReceivable: number;
   totalOverdue: number;
   monthSalesCount: number;
+  monthPurchases: number;
+  allTimePurchases: number;
+  netProfit: number;
   topClients: TopClientKPI[];
+  factoryPurchases: FactoryPurchaseKPI[];
   overdueAlerts: InstallmentRecord[];
   dueSoonAlerts: InstallmentRecord[];
   monthlyHistory: MonthlyChartData[];
@@ -48,7 +65,8 @@ export interface DashboardMetrics {
 export function calculateDashboardMetrics(
   sales: SaleRecord[],
   installments: InstallmentRecord[],
-  referenceDateInput: Date | string = new Date()
+  referenceDateInput: Date | string = new Date(),
+  purchases: PurchaseRecord[] = []
 ): DashboardMetrics {
   const refDate =
     typeof referenceDateInput === 'string'
@@ -148,12 +166,50 @@ export function calculateDashboardMetrics(
     monthlyHistory.push({ monthKey, label, total });
   }
 
+  // 5. Total de compras (mês corrente e histórico por fábrica)
+  let monthPurchases = 0;
+  let allTimePurchases = 0;
+  const factoryMap = new Map<string, { total: number; count: number }>();
+
+  for (const p of purchases) {
+    const amt = Number(p.total_amount) || 0;
+    allTimePurchases += amt;
+
+    const fName = (p.factory_name || 'Fornecedor').trim();
+    const prev = factoryMap.get(fName) || { total: 0, count: 0 };
+    prev.total += amt;
+    prev.count += 1;
+    factoryMap.set(fName, prev);
+
+    const pDate = new Date(p.purchase_date + 'T00:00:00Z');
+    if (
+      pDate.getUTCFullYear() === currentYear &&
+      pDate.getUTCMonth() === currentMonth
+    ) {
+      monthPurchases += amt;
+    }
+  }
+
+  const factoryPurchases: FactoryPurchaseKPI[] = Array.from(factoryMap.entries())
+    .map(([factoryName, data]) => ({
+      factoryName,
+      totalSpent: Math.round(data.total * 100) / 100,
+      purchasesCount: data.count,
+    }))
+    .sort((a, b) => b.totalSpent - a.totalSpent || b.purchasesCount - a.purchasesCount);
+
+  const netProfit = Math.round((monthRevenue - monthPurchases) * 100) / 100;
+
   return {
     monthRevenue,
     totalReceivable,
     totalOverdue,
     monthSalesCount,
+    monthPurchases: Math.round(monthPurchases * 100) / 100,
+    allTimePurchases: Math.round(allTimePurchases * 100) / 100,
+    netProfit,
     topClients,
+    factoryPurchases,
     overdueAlerts,
     dueSoonAlerts,
     monthlyHistory,

@@ -69,7 +69,7 @@ export default function LoginPage() {
           <div className="w-24 h-24 mx-auto rounded-3xl overflow-hidden border border-[#e2e8f0] shadow-sm bg-white p-1 flex items-center justify-center">
             <Image
               src="/diller.jpg"
-              alt="Diller-Hub"
+              alt="Gestão-Diller"
               width={96}
               height={96}
               className="w-full h-full object-cover rounded-2xl"
@@ -78,7 +78,7 @@ export default function LoginPage() {
           </div>
           <div>
             <h1 className="text-2xl font-black tracking-tight text-[#0f172a]">
-              Diller-Hub
+              Gestão-Diller
             </h1>
             <p className="text-xs font-semibold tracking-wider text-[#64748b] uppercase mt-0.5">
               Gestão Integrada de Negócios

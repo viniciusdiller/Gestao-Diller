@@ -9,6 +9,7 @@ import {
   ReceiptText,
   CalendarDays,
   KeyRound,
+  Package,
 } from 'lucide-react';
 import { useWorkspace } from '@/contexts/workspace-context';
 import { cn } from '@/lib/utils';
@@ -41,6 +42,12 @@ export function BottomNav() {
       href: '/cobrancas',
       icon: ReceiptText,
       active: pathname.startsWith('/cobrancas'),
+    },
+    {
+      label: 'Compras',
+      href: '/compras',
+      icon: Package,
+      active: pathname.startsWith('/compras'),
     },
   ];
 
@@ -78,7 +85,7 @@ export function BottomNav() {
   ];
 
   const activeNavItems = isCasaItauna ? casaItaunaNavItems : semijoiasNavItems;
-  const gridColsClass = isCasaItauna ? 'grid-cols-5' : 'grid-cols-4';
+  const gridColsClass = 'grid-cols-5';
 
   return (
     <nav className="fixed bottom-2 left-3 right-3 z-40 max-w-md mx-auto md:hidden">

@@ -125,3 +125,37 @@ export const UpdateInstallmentSchema = z.object({
 });
 
 export type UpdateInstallmentInput = z.infer<typeof UpdateInstallmentSchema>;
+
+export const PurchaseSchema = z.object({
+  purchase_date: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, 'Data deve estar no formato AAAA-MM-DD.'),
+  factory_name: z
+    .string()
+    .trim()
+    .min(1, 'O nome da fábrica/fornecedor é obrigatório.'),
+  total_amount: z
+    .number()
+    .positive('O valor total da compra deve ser maior que zero.'),
+  notes: z.string().trim().optional().nullable(),
+});
+
+export type PurchaseInput = z.infer<typeof PurchaseSchema>;
+
+export const UpdatePurchaseSchema = z.object({
+  id: z.string().uuid('ID de compra inválido.'),
+  purchase_date: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, 'Data deve estar no formato AAAA-MM-DD.'),
+  factory_name: z
+    .string()
+    .trim()
+    .min(1, 'O nome da fábrica/fornecedor é obrigatório.'),
+  total_amount: z
+    .number()
+    .positive('O valor total da compra deve ser maior que zero.'),
+  notes: z.string().trim().optional().nullable(),
+});
+
+export type UpdatePurchaseInput = z.infer<typeof UpdatePurchaseSchema>;
+
