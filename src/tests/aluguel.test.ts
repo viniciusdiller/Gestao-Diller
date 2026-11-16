@@ -258,5 +258,73 @@ describe('Validações Zod Casa Itaúna', () => {
     });
     expect(invalid.success).toBe(false);
   });
+
+  it('calcula a reserva pelo valor total da hospedagem, deduzindo faxina de R$ 180 (paga à faxineira) e calculando diária média e comissão da Dani (20%)', () => {
+    // 5 noites a R$ 2.500 no total (já líquido da plataforma)
+    // Diária média = 2500 / 5 = R$ 500/noite (métrica histórica)
+    // Faxina = R$ 180 (paga diretamente à faxineira)
+    // Saldo base de rateio = 2500 - 180 = R$ 2.320
+    // Dani tira 20% do saldo restante = 2320 * 0.20 = R$ 464,00
+    // Proprietários ficam com 80% = R$ 1.856,00
+    const res = calculateReservaTotals({
+      checkin: '2026-11-10',
+      checkout: '2026-11-15',
+      valorTotal: 2500,
+      taxaLimpeza: 180,
+      temComissaoDani: true,
+      taxaDaniPercentual: 20,
+    });
+
+    expect(res.num_diarias).toBe(5);
+    expect(res.valor_total).toBe(2500);
+    expect(res.valor_diaria).toBe(500); // 2500 / 5
+    expect(res.taxa_limpeza).toBe(180);
+    expect(res.saldo_apos_plataforma_e_faxina).toBe(2320);
+    expect(res.tem_comissao_dani).toBe(true);
+    expect(res.valor_comissao_dani).toBe(464);
+    expect(res.lucro_liquido_real).toBe(1856);
+  });
+
+  it('permite taxa de faxina personalizada (ex: R$ 200) e calcula a comissão da Dani sobre o saldo correto', () => {
+    // 4 noites a R$ 2.000 no total
+    // Faxina editada para R$ 200
+    // Diária média = 2000 / 4 = R$ 500/noite
+    // Saldo = 2000 - 200 = R$ 1.800
+    // Dani (20%) = 1800 * 0.20 = R$ 360,00
+    // Proprietários (80%) = R$ 1.440,00
+    const res = calculateReservaTotals({
+      checkin: '2026-12-01',
+      checkout: '2026-12-05',
+      valorTotal: 2000,
+      taxaLimpeza: 200,
+      temComissaoDani: true,
+      taxaDaniPercentual: 20,
+    });
+
+    expect(res.num_diarias).toBe(4);
+    expect(res.valor_total).toBe(2000);
+    expect(res.valor_diaria).toBe(500);
+    expect(res.taxa_limpeza).toBe(200);
+    expect(res.saldo_apos_plataforma_e_faxina).toBe(1800);
+    expect(res.valor_comissao_dani).toBe(360);
+    expect(res.lucro_liquido_real).toBe(1440);
+  });
+
+  it('valida que CreateReservaSchema aceita valor_total diretamente', () => {
+    const valid = CreateReservaSchema.safeParse({
+      hospede_id: 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11',
+      data_checkin: '2026-11-10',
+      data_checkout: '2026-11-15',
+      valor_total: 2500,
+      taxa_limpeza: 180,
+    });
+    expect(valid.success).toBe(true);
+    if (valid.success) {
+      expect(valid.data.valor_total).toBe(2500);
+      expect(valid.data.taxa_limpeza).toBe(180);
+      expect(valid.data.tem_comissao_dani).toBe(true);
+      expect(valid.data.taxa_dani_percentual).toBe(20);
+    }
+  });
 });
 
