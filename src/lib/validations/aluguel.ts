@@ -54,7 +54,8 @@ export const CreateReservaSchema = z.object({
   data_checkin: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Data de check-in inválida (AAAA-MM-DD).'),
   data_checkout: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Data de check-out inválida (AAAA-MM-DD).'),
   num_hospedes: z.number().int().min(1, 'Quantidade de hóspedes deve ser no mínimo 1.').default(1),
-  valor_diaria: z.number().min(0, 'Valor da diária não pode ser negativo.'),
+  valor_total: z.number().min(0, 'Valor total não pode ser negativo.').optional(),
+  valor_diaria: z.number().min(0, 'Valor da diária não pode ser negativo.').optional(),
   taxa_limpeza: z.number().min(0, 'Taxa de limpeza não pode ser negativa.').default(180),
   taxa_plataforma_percentual: z.number().min(0).max(100, 'Taxa da plataforma não pode ultrapassar 100%.').default(0),
   taxa_plataforma: z.number().min(0, 'Taxa da plataforma não pode ser negativa.').default(0).optional(),
@@ -70,6 +71,9 @@ export const CreateReservaSchema = z.object({
 }).refine((data) => data.data_checkout > data.data_checkin, {
   message: 'Data de check-out deve ser posterior à data de check-in.',
   path: ['data_checkout'],
+}).refine((data) => data.valor_total !== undefined || data.valor_diaria !== undefined, {
+  message: 'Informe o valor total da hospedagem ou o valor da diária.',
+  path: ['valor_total'],
 });
 export type CreateReservaInput = z.input<typeof CreateReservaSchema>;
 export type CreateReservaOutput = z.infer<typeof CreateReservaSchema>;
@@ -80,6 +84,7 @@ export const UpdateReservaSchema = z.object({
   data_checkin: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
   data_checkout: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
   num_hospedes: z.number().int().min(1).optional(),
+  valor_total: z.number().min(0).optional(),
   valor_diaria: z.number().min(0).optional(),
   taxa_limpeza: z.number().min(0).optional(),
   taxa_plataforma_percentual: z.number().min(0).max(100).optional(),

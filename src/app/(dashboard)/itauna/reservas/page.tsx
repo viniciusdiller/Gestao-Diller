@@ -74,12 +74,12 @@ export default function ItaunaReservasPage() {
   const [checkin, setCheckin] = React.useState('');
   const [checkout, setCheckout] = React.useState('');
   const [numHospedes, setNumHospedes] = React.useState<number>(2);
-  const [valorDiaria, setValorDiaria] = React.useState<number>(600);
+  const [valorTotal, setValorTotal] = React.useState<number>(2500);
   const [taxaLimpeza, setTaxaLimpeza] = React.useState<number>(180);
   const [origem, setOrigem] = React.useState<
     'airbnb' | 'booking' | 'instagram' | 'direto' | 'outros'
   >('airbnb');
-  const [taxaPlataformaPercentual, setTaxaPlataformaPercentual] = React.useState<number>(16);
+  const [taxaPlataformaPercentual, setTaxaPlataformaPercentual] = React.useState<number>(0);
   const [temComissaoDani, setTemComissaoDani] = React.useState<boolean>(true);
   const [taxaDaniPercentual, setTaxaDaniPercentual] = React.useState<number>(20);
   const [statusPagamento, setStatusPagamento] = React.useState<
@@ -96,9 +96,9 @@ export default function ItaunaReservasPage() {
   // Modal Edição
   const [reservaToEdit, setReservaToEdit] = React.useState<Reserva | null>(null);
   const [editNumHospedes, setEditNumHospedes] = React.useState(2);
-  const [editValorDiaria, setEditValorDiaria] = React.useState(0);
+  const [editValorTotal, setEditValorTotal] = React.useState(0);
   const [editTaxaLimpeza, setEditTaxaLimpeza] = React.useState(180);
-  const [editTaxaPlataformaPercentual, setEditTaxaPlataformaPercentual] = React.useState(16);
+  const [editTaxaPlataformaPercentual, setEditTaxaPlataformaPercentual] = React.useState(0);
   const [editTemComissaoDani, setEditTemComissaoDani] = React.useState(true);
   const [editTaxaDaniPercentual, setEditTaxaDaniPercentual] = React.useState(20);
   const [editStatus, setEditStatus] = React.useState('confirmada');
@@ -153,22 +153,13 @@ export default function ItaunaReservasPage() {
     }
   }, [searchParams]);
 
-  // Ajusta automaticamente as taxas padrão ao mudar de origem
+  // Ajusta automaticamente origem (não desconta % automática de plataforma)
   function handleOrigemChange(newOrigem: 'airbnb' | 'booking' | 'instagram' | 'direto' | 'outros') {
     setOrigem(newOrigem);
-    if (newOrigem === 'airbnb') {
-      setTaxaPlataformaPercentual(16);
-      setTemComissaoDani(true);
-      setTaxaDaniPercentual(20);
-    } else if (newOrigem === 'booking') {
-      setTaxaPlataformaPercentual(15);
-      setTemComissaoDani(true);
-      setTaxaDaniPercentual(20);
-    } else {
-      // Direto / WhatsApp / Instagram
-      setTaxaPlataformaPercentual(0);
-      // Mantém Dani como opção caso façam check-in avulso
-    }
+    // Não desconta taxa automática da plataforma, pois o valor digitado já é líquido
+    setTaxaPlataformaPercentual(0);
+    setTemComissaoDani(true);
+    setTaxaDaniPercentual(20);
   }
 
   // Opções para Combobox de Hóspedes
@@ -185,7 +176,7 @@ export default function ItaunaReservasPage() {
     return calculateReservaTotals({
       checkin,
       checkout,
-      valorDiaria,
+      valorTotal,
       taxaLimpeza,
       taxaPlataformaPercentual,
       temComissaoDani,
@@ -194,7 +185,7 @@ export default function ItaunaReservasPage() {
   }, [
     checkin,
     checkout,
-    valorDiaria,
+    valorTotal,
     taxaLimpeza,
     taxaPlataformaPercentual,
     temComissaoDani,
@@ -207,7 +198,7 @@ export default function ItaunaReservasPage() {
     return calculateReservaTotals({
       checkin: reservaToEdit.data_checkin,
       checkout: reservaToEdit.data_checkout,
-      valorDiaria: editValorDiaria,
+      valorTotal: editValorTotal,
       taxaLimpeza: editTaxaLimpeza,
       taxaPlataformaPercentual: editTaxaPlataformaPercentual,
       temComissaoDani: editTemComissaoDani,
@@ -215,7 +206,7 @@ export default function ItaunaReservasPage() {
     });
   }, [
     reservaToEdit,
-    editValorDiaria,
+    editValorTotal,
     editTaxaLimpeza,
     editTaxaPlataformaPercentual,
     editTemComissaoDani,
@@ -271,7 +262,8 @@ export default function ItaunaReservasPage() {
       data_checkin: checkin,
       data_checkout: checkout,
       num_hospedes: Number(numHospedes || 1),
-      valor_diaria: Number(valorDiaria),
+      valor_total: Number(valorTotal),
+      valor_diaria: previewCalc.valor_diaria,
       taxa_limpeza: Number(taxaLimpeza),
       taxa_plataforma_percentual: Number(taxaPlataformaPercentual),
       tem_comissao_dani: Boolean(temComissaoDani),
@@ -301,16 +293,14 @@ export default function ItaunaReservasPage() {
   function handleOpenEdit(r: Reserva) {
     setReservaToEdit(r);
     setEditNumHospedes(Number(r.num_hospedes || 1));
-    setEditValorDiaria(Number(r.valor_diaria));
+    setEditValorTotal(Number(r.valor_total));
     setEditTaxaLimpeza(r.taxa_limpeza !== undefined ? Number(r.taxa_limpeza) : 180);
     setEditTaxaPlataformaPercentual(
       r.taxa_plataforma_percentual !== undefined
         ? Number(r.taxa_plataforma_percentual)
-        : r.origem === 'airbnb'
-        ? 16
         : 0
     );
-    setEditTemComissaoDani(Boolean(r.tem_comissao_dani ?? (r.origem === 'airbnb')));
+    setEditTemComissaoDani(Boolean(r.tem_comissao_dani ?? true));
     setEditTaxaDaniPercentual(Number(r.taxa_dani_percentual ?? 20));
     setEditStatus(r.status);
     setEditStatusPagamento(r.status_pagamento);
@@ -329,7 +319,8 @@ export default function ItaunaReservasPage() {
     const res = await updateReservaAction({
       id: reservaToEdit.id,
       num_hospedes: Number(editNumHospedes || 1),
-      valor_diaria: Number(editValorDiaria),
+      valor_total: Number(editValorTotal),
+      valor_diaria: editPreviewCalc?.valor_diaria,
       taxa_limpeza: Number(editTaxaLimpeza),
       taxa_plataforma_percentual: Number(editTaxaPlataformaPercentual),
       tem_comissao_dani: Boolean(editTemComissaoDani),
@@ -533,13 +524,13 @@ export default function ItaunaReservasPage() {
                     {/* Breakdown Financeiro */}
                     <div className="text-[11px] text-[#64748b] space-y-1 pt-1 border-t border-[#f1f5f9]">
                       <div className="flex justify-between">
-                        <span>Diária x Noites:</span>
-                        <span className="font-medium text-[#0f172a]">
-                          {reserva.num_diarias} x {formatCurrency(Number(reserva.valor_diaria))}
+                        <span>Diária Média ({reserva.num_diarias} noites):</span>
+                        <span className="font-bold text-[#0369a1]">
+                          {formatCurrency(Number(reserva.valor_diaria))}/noite
                         </span>
                       </div>
                       <div className="flex justify-between text-slate-500">
-                        <span>(-) Despesa Faxina:</span>
+                        <span>(-) Faxina (paga à faxineira):</span>
                         <span className="font-medium text-slate-700">
                           - {formatCurrency(Number(reserva.taxa_limpeza || 180))}
                         </span>
@@ -547,7 +538,7 @@ export default function ItaunaReservasPage() {
                       {Number(reserva.taxa_plataforma) > 0 && (
                         <div className="flex justify-between text-rose-600">
                           <span>
-                            (-) Taxa {reserva.origem.toUpperCase()} ({reserva.taxa_plataforma_percentual || 16}%):
+                            (-) Taxa {reserva.origem.toUpperCase()} ({reserva.taxa_plataforma_percentual || 0}%):
                           </span>
                           <span className="font-medium">
                             - {formatCurrency(Number(reserva.taxa_plataforma))}
@@ -556,14 +547,14 @@ export default function ItaunaReservasPage() {
                       )}
                       {reserva.tem_comissao_dani && (
                         <div className="flex justify-between text-amber-700">
-                          <span>(-) Dani ({reserva.taxa_dani_percentual || 20}% restante):</span>
-                          <span className="font-medium">
+                          <span>(-) Repasse Dani ({reserva.taxa_dani_percentual || 20}%):</span>
+                          <span className="font-bold">
                             - {formatCurrency(Number(reserva.valor_comissao_dani || 0))}
                           </span>
                         </div>
                       )}
                       <div className="pt-1 border-t border-[#e2e8f0] flex justify-between font-bold text-[#0369a1]">
-                        <span>Lucro Líquido Real:</span>
+                        <span>Lucro Líquido Proprietário:</span>
                         <span>
                           {formatCurrency(
                             Number(
@@ -744,17 +735,20 @@ export default function ItaunaReservasPage() {
             </div>
           )}
 
-          {/* Tarifa Dinâmica e Taxa de Faxina */}
+          {/* Valor Total da Hospedagem e Taxa de Faxina */}
           <div className="grid grid-cols-2 gap-2.5">
             <div className="space-y-1">
               <label className="text-xs font-semibold text-[#0f172a]">
-                Valor da Diária (R$) *
+                Valor Total Hospedagem (R$) *
               </label>
               <CurrencyInput
-                value={valorDiaria}
-                onChange={setValorDiaria}
-                className="h-11 bg-white font-bold"
+                value={valorTotal}
+                onChange={setValorTotal}
+                className="h-11 bg-white font-bold text-[#0369a1]"
               />
+              <span className="text-[10px] text-[#64748b] block">
+                Valor líquido total a receber
+              </span>
             </div>
 
             <div className="space-y-1">
@@ -766,140 +760,116 @@ export default function ItaunaReservasPage() {
                 onChange={setTaxaLimpeza}
                 className="h-11 bg-white font-semibold"
               />
+              <span className="text-[10px] text-[#64748b] block">
+                Paga diretamente à faxineira
+              </span>
             </div>
           </div>
 
-          {/* Origem da Reserva e Comissão Plataforma em % */}
-          <div className="grid grid-cols-2 gap-2.5">
-            <div className="space-y-1">
-              <label className="text-xs font-semibold text-[#0f172a]">Origem / Canal</label>
-              <select
-                value={origem}
-                onChange={(e) =>
-                  handleOrigemChange(
-                    e.target.value as 'airbnb' | 'booking' | 'instagram' | 'direto' | 'outros'
-                  )
-                }
-                className="w-full h-11 rounded-xl border border-[#e2e8f0] bg-white px-3 text-xs font-semibold text-[#0f172a]"
-              >
-                <option value="airbnb">Airbnb (16%)</option>
-                <option value="booking">Booking.com (15%)</option>
-                <option value="direto">Direto / WhatsApp (0%)</option>
-                <option value="instagram">Instagram (0%)</option>
-                <option value="outros">Outros</option>
-              </select>
+          {/* Métrica de Diária Média para Épocas do Ano */}
+          <div className="p-3 rounded-2xl bg-[#f0f9ff] border border-[#bae6fd] flex items-center justify-between">
+            <div>
+              <span className="text-[10px] font-bold text-[#0369a1] uppercase tracking-wider block">
+                Métrica por Época do Ano
+              </span>
+              <p className="text-xs font-bold text-[#0f172a] mt-0.5">
+                Diária Média:{' '}
+                <span className="text-[#0369a1] text-sm font-extrabold">
+                  {formatCurrency(previewCalc.valor_diaria)}
+                </span>{' '}
+                / noite
+              </p>
             </div>
-
-            <div className="space-y-1">
-              <label className="text-xs font-semibold text-[#0f172a] flex items-center justify-between">
-                <span>Taxa Plataforma (%)</span>
-                <span className="text-[10px] text-rose-600 font-bold">
-                  {formatCurrency(previewCalc.taxa_plataforma)}
-                </span>
-              </label>
-              <Input
-                type="number"
-                step="0.5"
-                min="0"
-                max="100"
-                value={taxaPlataformaPercentual}
-                onChange={(e) => setTaxaPlataformaPercentual(parseFloat(e.target.value) || 0)}
-                placeholder="Ex: 16"
-                className="h-11 bg-white text-rose-600 font-bold"
-              />
+            <div className="text-right">
+              <span className="text-[11px] font-semibold text-[#0369a1] bg-white px-2.5 py-1 rounded-xl border border-[#bae6fd] shadow-2xs">
+                {previewCalc.num_diarias} noites
+              </span>
             </div>
           </div>
 
-          {/* Opção da Comissão da Dani */}
-          <div className="p-3 rounded-2xl bg-[#f8fafc] border border-[#e2e8f0] space-y-2">
+          {/* Origem da Reserva */}
+          <div className="space-y-1">
+            <label className="text-xs font-semibold text-[#0f172a]">Canal / Origem da Reserva</label>
+            <select
+              value={origem}
+              onChange={(e) =>
+                handleOrigemChange(
+                  e.target.value as 'airbnb' | 'booking' | 'instagram' | 'direto' | 'outros'
+                )
+              }
+              className="w-full h-11 rounded-xl border border-[#e2e8f0] bg-white px-3 text-xs font-semibold text-[#0f172a]"
+            >
+              <option value="airbnb">Airbnb</option>
+              <option value="booking">Booking.com</option>
+              <option value="direto">Direto / WhatsApp</option>
+              <option value="instagram">Instagram</option>
+              <option value="outros">Outros</option>
+            </select>
+          </div>
+
+          {/* Opção e Cálculo da Comissão da Dani */}
+          <div className="p-3.5 rounded-2xl bg-[#fffbeb] border border-[#fde68a] space-y-2">
             <div className="flex items-center justify-between">
               <label className="flex items-center gap-2 cursor-pointer select-none">
                 <input
                   type="checkbox"
                   checked={temComissaoDani}
                   onChange={(e) => setTemComissaoDani(e.target.checked)}
-                  className="w-4 h-4 rounded text-[#0369a1] focus:ring-[#0369a1] accent-[#0369a1] cursor-pointer"
+                  className="w-4 h-4 rounded text-amber-600 focus:ring-amber-500 accent-amber-600 cursor-pointer"
                 />
-                <span className="text-xs font-bold text-[#0f172a]">
-                  Comissão da Dani (Check-in / Checkout / Gestão)
+                <span className="text-xs font-bold text-[#78350f]">
+                  Comissão da Dani ({taxaDaniPercentual}%)
                 </span>
               </label>
               {temComissaoDani && (
-                <span className="text-xs font-bold text-amber-800">
-                  {formatCurrency(previewCalc.valor_comissao_dani)}
+                <span className="text-xs font-extrabold text-amber-950 bg-amber-200/80 px-2 py-0.5 rounded-lg border border-amber-300">
+                  Repasse: {formatCurrency(previewCalc.valor_comissao_dani)}
                 </span>
               )}
             </div>
 
             {temComissaoDani && (
-              <div className="pl-6 space-y-1.5 pt-1">
-                <div className="flex items-center gap-2">
-                  <span className="text-xs text-[#64748b]">Porcentagem:</span>
-                  <div className="w-24">
-                    <Input
-                      type="number"
-                      step="1"
-                      min="0"
-                      max="100"
-                      value={taxaDaniPercentual}
-                      onChange={(e) => setTaxaDaniPercentual(parseFloat(e.target.value) || 0)}
-                      className="h-8 text-xs bg-white font-bold"
-                    />
-                  </div>
-                  <span className="text-xs font-semibold text-[#64748b]">% sobre saldo</span>
-                </div>
-                <p className="text-[11px] text-[#64748b] leading-tight">
-                  Calculada como {taxaDaniPercentual}% sobre o saldo após deduzir a taxa da plataforma e a despesa de faxina.
+              <div className="text-[11px] text-amber-900/90 leading-relaxed border-t border-amber-200/70 pt-2 space-y-1">
+                <p>
+                  Calculada como <strong>{taxaDaniPercentual}%</strong> sobre o valor após deduzir a faxina ({formatCurrency(previewCalc.saldo_apos_plataforma_e_faxina)}).
+                </p>
+                <p className="text-[10px] text-amber-800">
+                  * A taxa de faxina de {formatCurrency(taxaLimpeza)} é paga diretamente à faxineira pelos proprietários.
                 </p>
               </div>
             )}
           </div>
 
           {/* Resumo Financeiro em Tempo Real */}
-          <div className="p-3.5 rounded-2xl bg-[#f0f9ff] border border-[#bae6fd] space-y-1.5 text-xs">
-            <div className="flex justify-between text-[#64748b]">
-              <span>Diárias ({previewCalc.num_diarias} noites):</span>
-              <span className="font-semibold text-[#0f172a]">
-                {previewCalc.num_diarias} x {formatCurrency(valorDiaria)}
-              </span>
-            </div>
-            <div className="pt-1 border-t border-[#bae6fd]/60 flex justify-between font-bold text-[#0f172a]">
-              <span>Total da Reserva:</span>
+          <div className="p-3.5 rounded-2xl bg-[#f8fafc] border border-[#e2e8f0] space-y-2 text-xs">
+            <div className="flex justify-between font-bold text-[#0f172a]">
+              <span>Total da Hospedagem:</span>
               <span className="text-[#0369a1] font-extrabold text-sm">
                 {formatCurrency(previewCalc.valor_total)}
               </span>
             </div>
 
-            {previewCalc.taxa_plataforma > 0 && (
-              <div className="flex justify-between text-rose-600">
-                <span>(-) Taxa {origem.toUpperCase()} ({taxaPlataformaPercentual}%):</span>
-                <span className="font-medium">- {formatCurrency(previewCalc.taxa_plataforma)}</span>
-              </div>
-            )}
-
-            <div className="flex justify-between text-slate-600">
-              <span>(-) Despesa de Faxina:</span>
-              <span className="font-medium">- {formatCurrency(previewCalc.taxa_limpeza)}</span>
-            </div>
-
-            <div className="flex justify-between text-[#64748b] text-[11px] pt-0.5 border-t border-dashed border-[#bae6fd]">
-              <span>Saldo pós Plataforma e Faxina:</span>
-              <span className="font-bold text-[#0f172a]">
-                {formatCurrency(previewCalc.saldo_apos_plataforma_e_faxina)}
+            <div className="flex justify-between text-[#64748b]">
+              <span>Diária Média ({previewCalc.num_diarias} noites):</span>
+              <span className="font-semibold text-[#0f172a]">
+                {formatCurrency(previewCalc.valor_diaria)} / noite
               </span>
             </div>
 
+            <div className="flex justify-between text-slate-600">
+              <span>(-) Custo da Faxina (paga à faxineira):</span>
+              <span className="font-medium">- {formatCurrency(previewCalc.taxa_limpeza)}</span>
+            </div>
+
             {temComissaoDani && (
-              <div className="flex justify-between text-amber-800">
-                <span>(-) Comissão Dani ({taxaDaniPercentual}% sobre saldo):</span>
-                <span className="font-semibold">
-                  - {formatCurrency(previewCalc.valor_comissao_dani)}
-                </span>
+              <div className="flex justify-between text-amber-800 font-semibold">
+                <span>(-) Repasse Dani ({taxaDaniPercentual}%):</span>
+                <span>- {formatCurrency(previewCalc.valor_comissao_dani)}</span>
               </div>
             )}
 
-            <div className="pt-2 border-t border-[#bae6fd] flex justify-between font-black text-sm text-[#0369a1]">
-              <span>Lucro Líquido Real:</span>
+            <div className="pt-2 border-t border-[#e2e8f0] flex justify-between font-black text-sm text-[#0369a1]">
+              <span>Lucro Líquido Proprietário:</span>
               <span>{formatCurrency(previewCalc.lucro_liquido_real)}</span>
             </div>
           </div>
@@ -942,11 +912,11 @@ export default function ItaunaReservasPage() {
 
             <div className="grid grid-cols-3 gap-2.5">
               <div className="space-y-1">
-                <label className="text-xs font-semibold text-[#0f172a]">Diária (R$)</label>
+                <label className="text-xs font-semibold text-[#0f172a]">Valor Total (R$)</label>
                 <CurrencyInput
-                  value={editValorDiaria}
-                  onChange={setEditValorDiaria}
-                  className="h-11 bg-white font-bold"
+                  value={editValorTotal}
+                  onChange={setEditValorTotal}
+                  className="h-11 bg-white font-bold text-[#0369a1]"
                 />
               </div>
               <div className="space-y-1">
@@ -970,6 +940,14 @@ export default function ItaunaReservasPage() {
                   className="h-11 bg-white font-bold"
                 />
               </div>
+            </div>
+
+            {/* Métrica de Diária Média */}
+            <div className="p-2.5 rounded-xl bg-[#f0f9ff] border border-[#bae6fd] flex items-center justify-between text-xs">
+              <span className="text-[#64748b]">Diária Média Calculada:</span>
+              <span className="font-extrabold text-[#0369a1]">
+                {formatCurrency(editPreviewCalc.valor_diaria)} / noite ({editPreviewCalc.num_diarias} noites)
+              </span>
             </div>
 
             <div className="grid grid-cols-2 gap-2.5">
@@ -1001,70 +979,53 @@ export default function ItaunaReservasPage() {
               </div>
             </div>
 
-            <div className="space-y-1">
-              <label className="text-xs font-semibold text-[#0f172a] flex items-center justify-between">
-                <span>Taxa Plataforma (%)</span>
-                <span className="text-xs text-rose-600 font-bold">
-                  {formatCurrency(editPreviewCalc.taxa_plataforma)}
-                </span>
-              </label>
-              <Input
-                type="number"
-                step="0.5"
-                min="0"
-                max="100"
-                value={editTaxaPlataformaPercentual}
-                onChange={(e) => setEditTaxaPlataformaPercentual(parseFloat(e.target.value) || 0)}
-                className="h-11 bg-white text-rose-600 font-bold"
-              />
-            </div>
-
-            <div className="p-3 rounded-2xl bg-[#f8fafc] border border-[#e2e8f0] space-y-2">
+            <div className="p-3.5 rounded-2xl bg-[#fffbeb] border border-[#fde68a] space-y-2">
               <div className="flex items-center justify-between">
                 <label className="flex items-center gap-2 cursor-pointer select-none">
                   <input
                     type="checkbox"
                     checked={editTemComissaoDani}
                     onChange={(e) => setEditTemComissaoDani(e.target.checked)}
-                    className="w-4 h-4 rounded text-[#0369a1] focus:ring-[#0369a1] accent-[#0369a1] cursor-pointer"
+                    className="w-4 h-4 rounded text-amber-600 focus:ring-amber-500 accent-amber-600 cursor-pointer"
                   />
-                  <span className="text-xs font-bold text-[#0f172a]">Comissão da Dani</span>
+                  <span className="text-xs font-bold text-[#78350f]">Comissão da Dani ({editTaxaDaniPercentual}%)</span>
                 </label>
                 {editTemComissaoDani && (
-                  <span className="text-xs font-bold text-amber-800">
-                    {formatCurrency(editPreviewCalc.valor_comissao_dani)}
+                  <span className="text-xs font-extrabold text-amber-950 bg-amber-200/80 px-2 py-0.5 rounded-lg border border-amber-300">
+                    Repasse: {formatCurrency(editPreviewCalc.valor_comissao_dani)}
                   </span>
                 )}
               </div>
 
               {editTemComissaoDani && (
-                <div className="pl-6 flex items-center gap-2">
-                  <div className="w-24">
-                    <Input
-                      type="number"
-                      step="1"
-                      min="0"
-                      max="100"
-                      value={editTaxaDaniPercentual}
-                      onChange={(e) => setEditTaxaDaniPercentual(parseFloat(e.target.value) || 0)}
-                      className="h-8 text-xs bg-white font-bold"
-                    />
-                  </div>
-                  <span className="text-xs font-semibold text-[#64748b]">% sobre saldo restante</span>
+                <div className="text-[11px] text-amber-900/90 leading-relaxed border-t border-amber-200/70 pt-2">
+                  <p>
+                    20% sobre o saldo após deduzir a faxina ({formatCurrency(editPreviewCalc.saldo_apos_plataforma_e_faxina)}). Faxina paga diretamente à faxineira.
+                  </p>
                 </div>
               )}
             </div>
 
             {/* Resumo Financeiro da Edição */}
-            <div className="p-3 rounded-2xl bg-[#f0f9ff] border border-[#bae6fd] text-xs space-y-1">
+            <div className="p-3.5 rounded-2xl bg-[#f8fafc] border border-[#e2e8f0] text-xs space-y-1.5">
               <div className="flex justify-between">
                 <span className="text-[#64748b]">Total da Reserva:</span>
                 <span className="font-bold text-[#0f172a]">
                   {formatCurrency(editPreviewCalc.valor_total)}
                 </span>
               </div>
-              <div className="flex justify-between font-bold text-[#0369a1]">
-                <span>Lucro Líquido Real:</span>
+              <div className="flex justify-between text-slate-500">
+                <span>(-) Faxina (paga à faxineira):</span>
+                <span className="font-medium">- {formatCurrency(editPreviewCalc.taxa_limpeza)}</span>
+              </div>
+              {editTemComissaoDani && (
+                <div className="flex justify-between text-amber-800 font-semibold">
+                  <span>(-) Repasse Dani ({editTaxaDaniPercentual}%):</span>
+                  <span>- {formatCurrency(editPreviewCalc.valor_comissao_dani)}</span>
+                </div>
+              )}
+              <div className="pt-1.5 border-t border-[#e2e8f0] flex justify-between font-black text-sm text-[#0369a1]">
+                <span>Lucro Líquido Proprietário:</span>
                 <span>{formatCurrency(editPreviewCalc.lucro_liquido_real)}</span>
               </div>
             </div>

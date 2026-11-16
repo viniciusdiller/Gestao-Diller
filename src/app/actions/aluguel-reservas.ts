@@ -165,6 +165,7 @@ export async function createReservaAction(rawInput: CreateReservaInput) {
     data_checkin,
     data_checkout,
     num_hospedes,
+    valor_total,
     valor_diaria,
     taxa_limpeza,
     taxa_plataforma_percentual,
@@ -196,10 +197,11 @@ export async function createReservaAction(rawInput: CreateReservaInput) {
     };
   }
 
-  // 2. Calcula totais e diárias exatas
+  // 2. Calcula totais e diárias exatas (métrica de diária média para histórico de épocas)
   const totals = calculateReservaTotals({
     checkin: data_checkin,
     checkout: data_checkout,
+    valorTotal: valor_total,
     valorDiaria: valor_diaria,
     taxaLimpeza: taxa_limpeza,
     taxaPlataformaPercentual: taxa_plataforma_percentual,
@@ -217,7 +219,7 @@ export async function createReservaAction(rawInput: CreateReservaInput) {
       data_checkout,
       num_hospedes: num_hospedes || 1,
       num_diarias: totals.num_diarias,
-      valor_diaria,
+      valor_diaria: totals.valor_diaria,
       taxa_limpeza: totals.taxa_limpeza,
       taxa_plataforma_percentual: totals.taxa_plataforma_percentual,
       taxa_plataforma: totals.taxa_plataforma,
@@ -286,9 +288,17 @@ export async function updateReservaAction(rawInput: UpdateReservaInput) {
 
   const checkin = updates.data_checkin || currentReserva.data_checkin;
   const checkout = updates.data_checkout || currentReserva.data_checkout;
+  const valorTotal =
+    updates.valor_total !== undefined
+      ? updates.valor_total
+      : updates.valor_diaria !== undefined
+      ? undefined
+      : Number(currentReserva.valor_total);
   const valorDiaria =
     updates.valor_diaria !== undefined
       ? updates.valor_diaria
+      : updates.valor_total !== undefined
+      ? undefined
       : Number(currentReserva.valor_diaria);
   const taxaLimpeza =
     updates.taxa_limpeza !== undefined
@@ -338,10 +348,11 @@ export async function updateReservaAction(rawInput: UpdateReservaInput) {
     }
   }
 
-  // Recalcula totais
+  // Recalcula totais (incluindo valor_diaria como média para histórico de épocas)
   const totals = calculateReservaTotals({
     checkin,
     checkout,
+    valorTotal,
     valorDiaria,
     taxaLimpeza,
     taxaPlataformaPercentual,
@@ -355,6 +366,7 @@ export async function updateReservaAction(rawInput: UpdateReservaInput) {
     ...updates,
     num_diarias: totals.num_diarias,
     valor_total: totals.valor_total,
+    valor_diaria: totals.valor_diaria,
     taxa_limpeza: totals.taxa_limpeza,
     taxa_plataforma_percentual: totals.taxa_plataforma_percentual,
     taxa_plataforma: totals.taxa_plataforma,

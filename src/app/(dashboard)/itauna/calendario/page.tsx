@@ -489,24 +489,24 @@ export default function ItaunaCalendarioPage() {
 
             {/* Breakdown Financeiro Transparente */}
             <div className="p-3.5 rounded-2xl bg-white border border-[#e2e8f0] space-y-2 text-xs">
-              <div className="flex justify-between">
-                <span className="text-[#64748b]">
-                  Diárias ({selectedReserva.num_diarias} noites):
-                </span>
-                <span className="font-semibold text-[#0f172a]">
-                  {selectedReserva.num_diarias} x {formatCurrency(Number(selectedReserva.valor_diaria))}
-                </span>
+              <div className="flex justify-between font-bold text-[#0f172a]">
+                <span>Total da Hospedagem:</span>
+                <span className="text-[#0369a1] font-extrabold">{formatCurrency(Number(selectedReserva.valor_total))}</span>
               </div>
 
-              <div className="pt-1.5 border-t border-[#f1f5f9] flex justify-between font-bold text-[#0f172a]">
-                <span>Total da Reserva</span>
-                <span className="text-[#0369a1] font-extrabold">{formatCurrency(Number(selectedReserva.valor_total))}</span>
+              <div className="flex justify-between text-[#64748b]">
+                <span>
+                  Diária Média ({selectedReserva.num_diarias} noites):
+                </span>
+                <span className="font-semibold text-[#0f172a]">
+                  {formatCurrency(Number(selectedReserva.valor_diaria))} / noite
+                </span>
               </div>
 
               {Number(selectedReserva.taxa_plataforma) > 0 && (
                 <div className="flex justify-between text-rose-600">
                   <span>
-                    (-) Taxa {selectedReserva.origem.toUpperCase()} ({selectedReserva.taxa_plataforma_percentual || 16}%)
+                    (-) Taxa {selectedReserva.origem.toUpperCase()} ({selectedReserva.taxa_plataforma_percentual || 0}%)
                   </span>
                   <span className="font-semibold">
                     - {formatCurrency(Number(selectedReserva.taxa_plataforma))}
@@ -515,7 +515,7 @@ export default function ItaunaCalendarioPage() {
               )}
 
               <div className="flex justify-between text-slate-500">
-                <span>(-) Despesa de Faxina</span>
+                <span>(-) Faxina (paga à faxineira):</span>
                 <span className="font-medium">
                   - {formatCurrency(Number(selectedReserva.taxa_limpeza || 180))}
                 </span>
@@ -523,15 +523,15 @@ export default function ItaunaCalendarioPage() {
 
               {selectedReserva.tem_comissao_dani && (
                 <div className="flex justify-between text-amber-700">
-                  <span>(-) Comissão da Dani (20% sobre saldo)</span>
-                  <span className="font-semibold">
+                  <span>(-) Repasse Dani ({selectedReserva.taxa_dani_percentual || 20}%):</span>
+                  <span className="font-bold">
                     - {formatCurrency(Number(selectedReserva.valor_comissao_dani || 0))}
                   </span>
                 </div>
               )}
 
               <div className="pt-2 border-t border-[#e2e8f0] flex justify-between text-sm font-extrabold text-[#0369a1]">
-                <span>Lucro Líquido Real</span>
+                <span>Lucro Líquido Proprietário:</span>
                 <span>
                   {formatCurrency(
                     Number(
