@@ -1,6 +1,7 @@
 export interface ReservaCalculada {
   num_diarias: number;
   subtotal_diarias: number;
+  valor_diaria: number;
   taxa_limpeza: number;
   valor_total: number;
   taxa_plataforma_percentual: number;
@@ -26,18 +27,19 @@ export function calculateNights(checkinStr: string, checkoutStr: string): number
 }
 
 /**
- * Calcula os totais financeiros de uma reserva:
- * 1. Subtotal diárias: num_diarias * valor_diaria
- * 2. Total cobrado da reserva: subtotal + taxa_limpeza (padrão R$ 180,00)
- * 3. Taxa da plataforma: % sobre o valor total (ex: 16% Airbnb)
- * 4. Saldo pós plataforma e faxina: Total - taxa_plataforma - taxa_limpeza
- * 5. Comissão da Dani: 20% sobre o saldo restante (se marcada)
- * 6. Lucro Líquido Real dos proprietários: saldo - comissao_dani
+ * Calcula os totais financeiros de uma reserva da Casa Itaúna:
+ * 1. Janela de datas: num_diarias calculada entre check-in e check-out
+ * 2. Valor total da hospedagem informado diretamente (já líquido da plataforma)
+ * 3. Diária média da reserva: valor_total / num_diarias (métrica histórica para épocas do ano)
+ * 4. Dedução da despesa de faxina (padrão R$ 180,00, paga diretamente à faxineira)
+ * 5. Comissão da Dani: 20% sobre o saldo (valor_total - taxa_limpeza)
+ * 6. Lucro Líquido Real dos proprietários: saldo restante (80%)
  */
 export function calculateReservaTotals(params: {
   checkin: string;
   checkout: string;
-  valorDiaria: number;
+  valorTotal?: number;
+  valorDiaria?: number;
   taxaLimpeza?: number;
   taxaPlataformaPercentual?: number;
   taxaPlataforma?: number;
@@ -45,12 +47,20 @@ export function calculateReservaTotals(params: {
   taxaDaniPercentual?: number;
 }): ReservaCalculada {
   const num_diarias = calculateNights(params.checkin, params.checkout);
-  const valorDiaria = Math.max(0, params.valorDiaria || 0);
   const taxa_limpeza = params.taxaLimpeza !== undefined ? Math.max(0, params.taxaLimpeza) : 180;
 
-  const subtotal_diarias = Math.round(num_diarias * valorDiaria * 100) / 100;
-  // O valor total da reserva é exclusivamente o subtotal das diárias (a faxina não é somada; é apenas subtraída como custo)
-  const valor_total = subtotal_diarias;
+  let valor_total = 0;
+  let valor_diaria = 0;
+
+  if (params.valorTotal !== undefined) {
+    valor_total = Math.max(0, params.valorTotal);
+    valor_diaria = num_diarias > 0 ? Math.round((valor_total / num_diarias) * 100) / 100 : 0;
+  } else if (params.valorDiaria !== undefined) {
+    valor_diaria = Math.max(0, params.valorDiaria);
+    valor_total = Math.round(num_diarias * valor_diaria * 100) / 100;
+  }
+
+  const subtotal_diarias = valor_total;
 
   let taxa_plataforma_percentual = 0;
   let taxa_plataforma = 0;
@@ -63,13 +73,13 @@ export function calculateReservaTotals(params: {
     taxa_plataforma_percentual = valor_total > 0 ? Math.round(((taxa_plataforma / valor_total) * 100) * 100) / 100 : 0;
   }
 
-  // Dedução da taxa da plataforma e da despesa de faxina sobre o valor total das diárias
+  // Dedução da despesa de faxina (R$ 180 paga à faxineira) e taxa de plataforma (se houver)
   const saldo_apos_plataforma_e_faxina = Math.max(
     0,
     Math.round((valor_total - taxa_plataforma - taxa_limpeza) * 100) / 100
   );
 
-  // Comissão da Dani: padrão ativa (true), calculada sobre o saldo restante
+  // Comissão da Dani: padrão ativa (true), calculada sobre o saldo restante após a faxina
   const tem_comissao_dani = params.temComissaoDani !== undefined ? Boolean(params.temComissaoDani) : true;
   const taxa_dani_percentual =
     params.taxaDaniPercentual !== undefined
@@ -85,6 +95,7 @@ export function calculateReservaTotals(params: {
   return {
     num_diarias,
     subtotal_diarias,
+    valor_diaria,
     taxa_limpeza,
     valor_total,
     taxa_plataforma_percentual,
